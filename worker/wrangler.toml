@@ -1,0 +1,14 @@
+name = "canopy-companion-relay"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+account_id = "<your-cf-account-id>"
+
+[vars]
+APNS_BUNDLE_ID = "sh.saqoo.CanopyCompanion"
+APNS_KEY_ID = "<your-apns-key-id>"
+APNS_TEAM_ID = "G5G54TCH8W"
+APNS_USE_SANDBOX = "true"
+
+[[kv_namespaces]]
+binding = "REQUESTS"
+id = "<your-kv-namespace-id>"
