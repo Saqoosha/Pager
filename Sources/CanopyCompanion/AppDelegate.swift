@@ -1,7 +1,8 @@
 import UIKit
 import UserNotifications
 
-final class AppDelegate: NSObject, UIApplicationDelegate, @unchecked Sendable {
+@MainActor
+final class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
@@ -25,17 +26,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate, @unchecked Sendable {
 
     private func registerNotificationCategory() {
         let allow = UNNotificationAction(
-            identifier: "ALLOW_ACTION",
+            identifier: NotificationAction.allow,
             title: "Allow",
             options: [.authenticationRequired]
         )
         let deny = UNNotificationAction(
-            identifier: "DENY_ACTION",
+            identifier: NotificationAction.deny,
             title: "Deny",
             options: [.destructive]
         )
         let allowAlways = UNNotificationAction(
-            identifier: "ALLOW_ALWAYS_ACTION",
+            identifier: NotificationAction.allowAlways,
             title: "Always Allow",
             options: [.authenticationRequired]
         )
@@ -57,7 +58,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, @unchecked Sendable {
             if let error {
                 print("Notification auth error: \(error)")
             }
-            print("Notification permission granted: \(granted)")
+            if !granted {
+                print("Notification permission denied")
+                Task { @MainActor in
+                    NetworkService.shared.lastError = "Notification permission denied — enable in Settings"
+                }
+            }
         }
     }
 
@@ -78,10 +84,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate, @unchecked Sendable {
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
         print("APNs registration failed: \(error)")
+        Task { @MainActor in
+            NetworkService.shared.lastError = "APNs registration failed: \(error.localizedDescription)"
+        }
     }
 }
 
-// MARK: - Notification Delegate (nonisolated for Swift 6)
+// MARK: - Notification Action Identifiers
+
+enum NotificationAction {
+    static let allow = "ALLOW_ACTION"
+    static let deny = "DENY_ACTION"
+    static let allowAlways = "ALLOW_ALWAYS_ACTION"
+}
+
+// MARK: - Notification Delegate (separate class for Swift 6 strict concurrency)
 
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
     static let shared = NotificationDelegate()
@@ -99,22 +116,25 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
 
         let decision: String
         switch response.actionIdentifier {
-        case "ALLOW_ACTION":
+        case NotificationAction.allow:
             decision = "allow"
-        case "DENY_ACTION":
+        case NotificationAction.deny:
             decision = "deny"
-        case "ALLOW_ALWAYS_ACTION":
+        case NotificationAction.allowAlways:
             decision = "allowAlways"
         case UNNotificationDismissActionIdentifier:
+            // Dismissing notification is treated as deny
             decision = "deny"
         default:
             completionHandler()
             return
         }
 
+        // Call completionHandler immediately — Apple requires prompt return.
+        // sendDecision runs fire-and-forget with retry.
+        completionHandler()
         Task {
             await NetworkService.shared.sendDecision(requestId: requestId, decision: decision)
-            completionHandler()
         }
     }
 

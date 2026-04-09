@@ -5,15 +5,18 @@ interface Env {
   APNS_TEAM_ID: string;
   APNS_BUNDLE_ID: string;
   SHARED_SECRET: string;
-  APNS_USE_SANDBOX: string;
+  APNS_USE_SANDBOX: "true" | "false";
 }
+
+type Decision = "allow" | "deny" | "allowAlways";
+const VALID_DECISIONS: Decision[] = ["allow", "deny", "allowAlways"];
 
 interface PendingRequest {
   requestId: string;
   toolName: string;
   toolInput: string;
   project: string;
-  decision?: string;
+  decision?: Decision;
   timestamp: number;
 }
 
@@ -42,12 +45,12 @@ async function generateAPNsJWT(env: Env): Promise<string> {
   const claims = base64urlString(JSON.stringify({ iss: env.APNS_TEAM_ID, iat: now }));
   const unsigned = `${header}.${claims}`;
   const key = await importAPNsKey(env.APNS_PRIVATE_KEY);
+  // Web Crypto ECDSA returns raw r||s format directly (no DER-to-raw conversion needed)
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     key,
     new TextEncoder().encode(unsigned),
   );
-  // Convert DER signature to raw r||s format is not needed — Web Crypto returns raw format
   return `${unsigned}.${base64url(signature)}`;
 }
 
@@ -68,15 +71,45 @@ async function sendPush(env: Env, deviceToken: string, payload: object): Promise
   });
 }
 
-// --- Auth ---
+// --- Auth (timing-safe comparison) ---
 
-function checkAuth(request: Request, env: Env): boolean {
-  const auth = request.headers.get("Authorization");
-  return auth === `Bearer ${env.SHARED_SECRET}`;
+async function checkAuth(request: Request, env: Env): Promise<boolean> {
+  if (!env.SHARED_SECRET) return false;
+  const auth = request.headers.get("Authorization") ?? "";
+  const expected = `Bearer ${env.SHARED_SECRET}`;
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(auth)),
+    crypto.subtle.digest("SHA-256", enc.encode(expected)),
+  ]);
+  const viewA = new Uint8Array(a);
+  const viewB = new Uint8Array(b);
+  if (viewA.length !== viewB.length) return false;
+  let result = 0;
+  for (let i = 0; i < viewA.length; i++) result |= viewA[i]! ^ viewB[i]!;
+  return result === 0;
 }
 
 function unauthorized(): Response {
-  return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  return new Response(JSON.stringify({ error: "unauthorized" }), {
+    status: 401,
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  });
+}
+
+function badRequest(message: string): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status: 400,
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  });
+}
+
+async function parseJSON<T>(request: Request): Promise<T | null> {
+  try {
+    return (await request.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
 // --- Routes ---
@@ -86,7 +119,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // CORS for iOS app
+    // CORS preflight (for browser-based debugging or web clients)
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
@@ -102,163 +135,193 @@ export default {
       "Content-Type": "application/json",
     };
 
-    if (!checkAuth(request, env)) return unauthorized();
+    try {
+      if (!(await checkAuth(request, env))) return unauthorized();
 
-    // POST /register - store device token
-    if (path === "/register" && request.method === "POST") {
-      const body = (await request.json()) as { token: string };
-      if (!body.token) {
-        return new Response(JSON.stringify({ error: "token required" }), { status: 400, headers: corsHeaders });
-      }
-      await env.REQUESTS.put("device_token", body.token);
-      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-    }
-
-    // POST /request - receive permission request from hook, send push
-    if (path === "/request" && request.method === "POST") {
-      const body = (await request.json()) as {
-        requestId: string;
-        toolName: string;
-        toolInput: string;
-        project: string;
-      };
-
-      const deviceToken = await env.REQUESTS.get("device_token");
-      if (!deviceToken) {
-        return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
+      // POST /register — store device token
+      if (path === "/register" && request.method === "POST") {
+        const body = await parseJSON<{ token: string }>(request);
+        if (!body?.token) return badRequest("token required");
+        // Validate APNs token format: lowercase hex string (length varies by device/OS)
+        if (!/^[0-9a-f]+$/.test(body.token)) return badRequest("invalid token format");
+        await env.REQUESTS.put("device_token", body.token);
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
 
-      // Store pending request (TTL 5 minutes)
-      const pending: PendingRequest = {
-        requestId: body.requestId,
-        toolName: body.toolName,
-        toolInput: body.toolInput,
-        project: body.project,
-        timestamp: Date.now(),
-      };
-      await env.REQUESTS.put(`request:${body.requestId}`, JSON.stringify(pending), { expirationTtl: 300 });
+      // POST /request — receive permission request from hook, send push
+      if (path === "/request" && request.method === "POST") {
+        const body = await parseJSON<{
+          requestId: string;
+          toolName: string;
+          toolInput: string;
+          project: string;
+        }>(request);
 
-      // Truncate toolInput for notification body
-      const inputPreview = body.toolInput.length > 200 ? body.toolInput.slice(0, 200) + "…" : body.toolInput;
+        if (!body?.requestId || !body.toolName) return badRequest("requestId and toolName required");
 
-      // Send APNs push
-      const apnsPayload = {
-        aps: {
-          alert: {
-            title: `[${body.project}] ${body.toolName}`,
-            body: inputPreview,
+        const deviceToken = await env.REQUESTS.get("device_token");
+        if (!deviceToken) {
+          return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
+        }
+
+        const pending: PendingRequest = {
+          requestId: body.requestId,
+          toolName: body.toolName,
+          toolInput: body.toolInput || "",
+          project: body.project || "",
+          timestamp: Date.now(),
+        };
+        await env.REQUESTS.put(`request:${body.requestId}`, JSON.stringify(pending), { expirationTtl: 300 });
+
+        const inputPreview = (body.toolInput || "").length > 200 ? body.toolInput.slice(0, 200) + "…" : (body.toolInput || "");
+
+        const apnsPayload = {
+          aps: {
+            alert: {
+              title: `[${body.project || "?"}] ${body.toolName}`,
+              body: inputPreview,
+            },
+            sound: "default",
+            category: "PERMISSION_REQUEST",
+            "interruption-level": "time-sensitive",
+            "mutable-content": 1,
           },
-          sound: "default",
-          category: "PERMISSION_REQUEST",
-          "interruption-level": "time-sensitive",
-          "mutable-content": 1,
-        },
-        requestId: body.requestId,
-      };
+          requestId: body.requestId,
+        };
 
-      const pushResult = await sendPush(env, deviceToken, apnsPayload);
-      if (!pushResult.ok) {
-        const err = await pushResult.text();
-        return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {
-          status: 502,
-          headers: corsHeaders,
-        });
+        const pushResult = await sendPush(env, deviceToken, apnsPayload);
+        if (!pushResult.ok) {
+          const err = await pushResult.text();
+          return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {
+            status: 502,
+            headers: corsHeaders,
+          });
+        }
+
+        return new Response(JSON.stringify({ ok: true, requestId: body.requestId }), { headers: corsHeaders });
       }
 
-      return new Response(JSON.stringify({ ok: true, requestId: body.requestId }), { headers: corsHeaders });
-    }
+      // POST /response — receive decision from iOS app
+      if (path === "/response" && request.method === "POST") {
+        const body = await parseJSON<{ requestId: string; decision: string }>(request);
+        if (!body?.requestId || !body.decision) return badRequest("requestId and decision required");
+        if (!VALID_DECISIONS.includes(body.decision as Decision)) {
+          return badRequest(`invalid decision: must be one of ${VALID_DECISIONS.join(", ")}`);
+        }
 
-    // POST /response - receive decision from iOS app
-    if (path === "/response" && request.method === "POST") {
-      const body = (await request.json()) as { requestId: string; decision: string };
-      const key = `request:${body.requestId}`;
-      const raw = await env.REQUESTS.get(key);
-      if (!raw) {
-        return new Response(JSON.stringify({ error: "request not found or expired" }), {
-          status: 404,
-          headers: corsHeaders,
-        });
+        const key = `request:${body.requestId}`;
+        const raw = await env.REQUESTS.get(key);
+        if (!raw) {
+          return new Response(JSON.stringify({ error: "request not found or expired" }), {
+            status: 404,
+            headers: corsHeaders,
+          });
+        }
+        let pending: PendingRequest;
+        try {
+          pending = JSON.parse(raw);
+        } catch {
+          return new Response(JSON.stringify({ error: "corrupted request data" }), {
+            status: 500,
+            headers: corsHeaders,
+          });
+        }
+        pending.decision = body.decision as Decision;
+        await env.REQUESTS.put(key, JSON.stringify(pending), { expirationTtl: 60 });
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
-      const pending: PendingRequest = JSON.parse(raw);
-      pending.decision = body.decision;
-      await env.REQUESTS.put(key, JSON.stringify(pending), { expirationTtl: 60 });
-      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-    }
 
-    // GET /status/:requestId - poll for decision
-    if (path.startsWith("/status/") && request.method === "GET") {
-      const requestId = path.split("/status/")[1];
-      const raw = await env.REQUESTS.get(`request:${requestId}`);
-      if (!raw) {
-        return new Response(JSON.stringify({ status: "expired" }), { headers: corsHeaders });
+      // GET /status/:requestId — poll for decision
+      if (path.startsWith("/status/") && request.method === "GET") {
+        const requestId = path.slice("/status/".length);
+        if (!requestId || requestId.includes("/")) {
+          return badRequest("invalid requestId");
+        }
+        const raw = await env.REQUESTS.get(`request:${requestId}`);
+        if (!raw) {
+          return new Response(JSON.stringify({ status: "expired" }), { headers: corsHeaders });
+        }
+        let pending: PendingRequest;
+        try {
+          pending = JSON.parse(raw);
+        } catch {
+          return new Response(JSON.stringify({ status: "expired" }), { headers: corsHeaders });
+        }
+        if (pending.decision) {
+          // Let TTL expire the entry — immediate deletion risks the poller missing
+          // the decision if its HTTP response is lost after we delete here
+          return new Response(JSON.stringify({ status: "decided", decision: pending.decision }), {
+            headers: corsHeaders,
+          });
+        }
+        return new Response(JSON.stringify({ status: "pending" }), { headers: corsHeaders });
       }
-      const pending: PendingRequest = JSON.parse(raw);
-      if (pending.decision) {
-        // Clean up
-        await env.REQUESTS.delete(`request:${requestId}`);
-        return new Response(JSON.stringify({ status: "decided", decision: pending.decision }), {
-          headers: corsHeaders,
-        });
-      }
-      return new Response(JSON.stringify({ status: "pending" }), { headers: corsHeaders });
-    }
 
-    // POST /notify - send plain notification (no action buttons)
-    if (path === "/notify" && request.method === "POST") {
-      const body = (await request.json()) as { title: string; message: string };
-      const deviceToken = await env.REQUESTS.get("device_token");
-      if (!deviceToken) {
-        return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
-      }
-      const payload = {
-        aps: {
-          alert: {
-            title: body.title || "Canopy Companion",
-            body: body.message || "",
+      // POST /notify — send plain notification (no action buttons)
+      if (path === "/notify" && request.method === "POST") {
+        const body = await parseJSON<{ title: string; message: string }>(request);
+        if (!body) return badRequest("invalid JSON body");
+        const deviceToken = await env.REQUESTS.get("device_token");
+        if (!deviceToken) {
+          return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
+        }
+        const payload = {
+          aps: {
+            alert: {
+              title: body.title || "Canopy Companion",
+              body: body.message || "",
+            },
+            sound: "default",
+            "interruption-level": "time-sensitive",
           },
-          sound: "default",
-        },
-      };
-      const pushResult = await sendPush(env, deviceToken, payload);
-      if (!pushResult.ok) {
-        const err = await pushResult.text();
-        return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {
-          status: 502,
-          headers: corsHeaders,
-        });
+        };
+        const pushResult = await sendPush(env, deviceToken, payload);
+        if (!pushResult.ok) {
+          const err = await pushResult.text();
+          return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {
+            status: 502,
+            headers: corsHeaders,
+          });
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
-      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-    }
 
-    // POST /test - send test notification
-    if (path === "/test" && request.method === "POST") {
-      const deviceToken = await env.REQUESTS.get("device_token");
-      if (!deviceToken) {
-        return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
-      }
-      const testPayload = {
-        aps: {
-          alert: {
-            title: "Canopy Companion",
-            body: "テスト通知。ボタンが表示されるか確認。",
+      // POST /test — send test notification
+      if (path === "/test" && request.method === "POST") {
+        const deviceToken = await env.REQUESTS.get("device_token");
+        if (!deviceToken) {
+          return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
+        }
+        const testPayload = {
+          aps: {
+            alert: {
+              title: "Canopy Companion",
+              body: "テスト通知。ボタンが表示されるか確認。",
+            },
+            sound: "default",
+            category: "PERMISSION_REQUEST",
+            "interruption-level": "time-sensitive",
           },
-          sound: "default",
-          category: "PERMISSION_REQUEST",
-          "interruption-level": "time-sensitive",
-        },
-        requestId: "test",
-      };
-      const pushResult = await sendPush(env, deviceToken, testPayload);
-      if (!pushResult.ok) {
-        const err = await pushResult.text();
-        return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {
-          status: 502,
-          headers: corsHeaders,
-        });
+          requestId: crypto.randomUUID(),
+        };
+        const pushResult = await sendPush(env, deviceToken, testPayload);
+        if (!pushResult.ok) {
+          const err = await pushResult.text();
+          return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {
+            status: 502,
+            headers: corsHeaders,
+          });
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
       }
-      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
-    }
 
-    return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: corsHeaders });
+    } catch (e) {
+      console.error("Unhandled error:", e);
+      return new Response(JSON.stringify({ error: "internal_error", detail: String(e) }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   },
 };
