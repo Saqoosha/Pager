@@ -2,3 +2,4 @@ credentials/
 worker/node_modules/
 worker/dist/
 worker/.wrangler/
+firebase-debug.log
