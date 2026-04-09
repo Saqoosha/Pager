@@ -12,10 +12,12 @@
 		728963698E09C1523AC58D33 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D42C34C84024FB8C6513B7E1 /* NetworkService.swift */; };
 		76F8DDD83475CDFAAC059A50 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F37C1F9F263E0AFFD4A17614 /* AppDelegate.swift */; };
 		CCA30633BBA6C1FDBF9D0902 /* CanopyCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F3DC41D8266E711911BA77 /* CanopyCompanionApp.swift */; };
+		ED477BAA5CA564B7BF87568F /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13EFA404754FF36771B4735E /* KeychainHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1171B6EC55D5F43629FC6813 /* CanopyCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CanopyCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13EFA404754FF36771B4735E /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		20DE886DEC2C3D07A41EFDFB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5C23A7CF72A01185880D42B1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CE7C2DB31AF9139CD3274B7D /* CanopyCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CanopyCompanion.entitlements; sourceTree = "<group>"; };
@@ -33,6 +35,7 @@
 				CE7C2DB31AF9139CD3274B7D /* CanopyCompanion.entitlements */,
 				F3F3DC41D8266E711911BA77 /* CanopyCompanionApp.swift */,
 				20DE886DEC2C3D07A41EFDFB /* ContentView.swift */,
+				13EFA404754FF36771B4735E /* KeychainHelper.swift */,
 				D42C34C84024FB8C6513B7E1 /* NetworkService.swift */,
 			);
 			name = CanopyCompanion;
@@ -128,6 +131,7 @@
 				76F8DDD83475CDFAAC059A50 /* AppDelegate.swift in Sources */,
 				CCA30633BBA6C1FDBF9D0902 /* CanopyCompanionApp.swift in Sources */,
 				13B72117E2420D244E7B64EF /* ContentView.swift in Sources */,
+				ED477BAA5CA564B7BF87568F /* KeychainHelper.swift in Sources */,
 				728963698E09C1523AC58D33 /* NetworkService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
