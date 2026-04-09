@@ -2,10 +2,23 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("workerUrl") private var workerUrl = ""
-    @AppStorage("sharedSecret") private var sharedSecret = ""
     @AppStorage("deviceToken") private var deviceToken = ""
-    @StateObject private var network = NetworkService.shared
+    @ObservedObject private var network = NetworkService.shared
+    @State private var sharedSecret = Self.loadOrMigrateSecret()
     @State private var testResult: String?
+
+    /// Migrate sharedSecret from UserDefaults to Keychain on first launch after update
+    private static func loadOrMigrateSecret() -> String {
+        if let existing = KeychainHelper.load(key: "sharedSecret") {
+            return existing
+        }
+        if let legacy = UserDefaults.standard.string(forKey: "sharedSecret"), !legacy.isEmpty {
+            KeychainHelper.save(key: "sharedSecret", value: legacy)
+            UserDefaults.standard.removeObject(forKey: "sharedSecret")
+            return legacy
+        }
+        return ""
+    }
 
     var body: some View {
         NavigationStack {
@@ -31,9 +44,16 @@ struct ContentView: View {
                 Section("Worker Configuration") {
                     TextField("Worker URL", text: $workerUrl)
                         .textContentType(.URL)
-                        .autocapitalization(.none)
+                        .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
                     SecureField("Shared Secret", text: $sharedSecret)
+                        .onChange(of: sharedSecret) { _, newValue in
+                            if newValue.isEmpty {
+                                KeychainHelper.delete(key: "sharedSecret")
+                            } else {
+                                KeychainHelper.save(key: "sharedSecret", value: newValue)
+                            }
+                        }
                 }
 
                 Section {
@@ -46,13 +66,18 @@ struct ContentView: View {
                         Label("Registered", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                     }
+
+                    if let error = network.lastError {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .font(.caption)
+                    }
                 }
 
                 Section {
                     Button("Send Test Notification") {
                         Task {
-                            let ok = await network.sendTestNotification()
-                            testResult = ok ? "Sent!" : "Failed"
+                            testResult = await network.sendTestNotification()
                         }
                     }
                     .disabled(!network.isRegistered)
@@ -60,6 +85,7 @@ struct ContentView: View {
                     if let result = testResult {
                         Text(result)
                             .foregroundStyle(result == "Sent!" ? .green : .red)
+                            .font(.caption)
                     }
                 }
 

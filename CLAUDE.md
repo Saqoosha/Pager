@@ -33,14 +33,15 @@ cd worker && wrangler deploy
 
 - `NotificationDelegate` is a separate class from `AppDelegate` to satisfy Swift 6 nonisolated requirements for `UNUserNotificationCenterDelegate`
 - `NetworkService` is `@MainActor` with `nonisolated` on `sendDecision()` since it's called from the notification delegate
-- APNs sandbox (`api.sandbox.push.apple.com`) is used because the entitlement is `aps-environment: development`
+- APNs sandbox is controlled by `APNS_USE_SANDBOX` worker var. Must match the app's `aps-environment` entitlement (currently `development`)
 - Worker stores pending requests in KV with 5-minute TTL; decided requests get 60-second TTL for polling pickup
 
 ## Hooks
 
-Three hook scripts in `hooks/` directory:
+One hook script in `hooks/` directory:
 - `permission-request.sh` — sends permission request to worker, polls for decision (120s timeout)
-- Notification and Stop hooks live in `~/.claude/hooks/` and use the `/notify` endpoint
+
+Notification and Stop hooks live in `~/.claude/hooks/` and use the `/notify` endpoint
 
 ## Credentials
 
