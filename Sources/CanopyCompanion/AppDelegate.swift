@@ -112,7 +112,6 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         let requestId = userInfo["requestId"] as? String
         let historyId = (userInfo["historyId"] as? String) ?? requestId
 
-        // Handle plain tap: open the detail view for this notification.
         if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             if let id = historyId {
                 Task { @MainActor in
@@ -123,7 +122,6 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
             return
         }
 
-        // Otherwise this is an action button (Allow / Deny / AllowAlways / dismiss).
         guard let requestId else {
             completionHandler()
             return
@@ -144,15 +142,15 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
             return
         }
 
-        // Call completionHandler immediately — Apple requires prompt return.
-        // sendDecision and history update run fire-and-forget.
+        // Apple requires prompt return from this delegate; async work runs
+        // after the handler returns and logs its own failures.
         completionHandler()
 
         let decidedAt = Date()
         Task {
             await NetworkService.shared.sendDecision(requestId: requestId, decision: decision)
         }
-        Task.detached {
+        Task {
             do {
                 try HistoryStore.updateDecision(
                     requestId: requestId,

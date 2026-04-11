@@ -67,10 +67,15 @@ struct HistoryListView: View {
     }
 
     private func delete(at offsets: IndexSet) {
-        for i in offsets {
-            try? HistoryStore.delete(id: items[i].id)
+        do {
+            for i in offsets {
+                try HistoryStore.delete(id: items[i].id)
+            }
+            items.remove(atOffsets: offsets)
+        } catch {
+            loadError = "Delete failed: \(error.localizedDescription)"
+            reload()
         }
-        items.remove(atOffsets: offsets)
     }
 }
 
@@ -125,6 +130,7 @@ struct HistoryDetailView: View {
     let id: String
     @State private var item: NotificationHistoryItem?
     @State private var missing = false
+    @State private var loadError: String?
 
     var body: some View {
         Group {
@@ -161,6 +167,12 @@ struct HistoryDetailView: View {
                         }
                     }
                 }
+            } else if let loadError {
+                ContentUnavailableView(
+                    "Failed to load notification",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(loadError)
+                )
             } else if missing {
                 ContentUnavailableView(
                     "Notification not found",
@@ -182,7 +194,7 @@ struct HistoryDetailView: View {
                 missing = true
             }
         } catch {
-            missing = true
+            loadError = error.localizedDescription
         }
     }
 

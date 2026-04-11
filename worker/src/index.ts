@@ -158,34 +158,42 @@ export default {
         }>(request);
 
         if (!body?.requestId || !body.toolName) return badRequest("requestId and toolName required");
+        // requestId is used as a KV key (`request:${id}`) and suffixed into iOS
+        // history filenames, so restrict it to a safe alphabet.
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(body.requestId)) {
+          return badRequest("invalid requestId format");
+        }
 
         const deviceToken = await env.REQUESTS.get("device_token");
         if (!deviceToken) {
           return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
         }
 
+        // Cap individual string fields so an adversarial payload can't push the
+        // APNs body past the 4KB limit and make /request silently fail.
+        const MAX_TOOL_NAME = 120;
+        const MAX_PROJECT = 120;
+        const MAX_FULL_INPUT = 3000;
+
+        const toolName = body.toolName.slice(0, MAX_TOOL_NAME);
+        const project = (body.project || "").slice(0, MAX_PROJECT);
+        const rawInput = body.toolInput || "";
+        const toolInputFull = rawInput.length > MAX_FULL_INPUT ? rawInput.slice(0, MAX_FULL_INPUT) + "…" : rawInput;
+        const inputPreview = rawInput.length > 200 ? rawInput.slice(0, 200) + "…" : rawInput;
+
         const pending: PendingRequest = {
           requestId: body.requestId,
-          toolName: body.toolName,
-          toolInput: body.toolInput || "",
-          project: body.project || "",
+          toolName,
+          toolInput: rawInput,
+          project,
           timestamp: Date.now(),
         };
         await env.REQUESTS.put(`request:${body.requestId}`, JSON.stringify(pending), { expirationTtl: 300 });
 
-        const inputPreview = (body.toolInput || "").length > 200 ? body.toolInput.slice(0, 200) + "…" : (body.toolInput || "");
-
-        // Full tool input for Notification Service Extension history capture.
-        // APNs payload limit is 4KB; cap to leave headroom for the rest of the payload.
-        const MAX_FULL_INPUT = 3000;
-        const toolInputFull = (body.toolInput || "").length > MAX_FULL_INPUT
-          ? body.toolInput.slice(0, MAX_FULL_INPUT) + "…"
-          : (body.toolInput || "");
-
         const apnsPayload = {
           aps: {
             alert: {
-              title: `[${body.project || "?"}] ${body.toolName}`,
+              title: `[${project || "?"}] ${toolName}`,
               body: inputPreview,
             },
             sound: "default",
@@ -194,9 +202,9 @@ export default {
             "mutable-content": 1,
           },
           requestId: body.requestId,
-          toolName: body.toolName,
+          toolName,
           toolInputFull,
-          project: body.project || "",
+          project,
         };
 
         const pushResult = await sendPush(env, deviceToken, apnsPayload);
@@ -329,10 +337,13 @@ export default {
 
       return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: corsHeaders });
     } catch (e) {
+      // Log the full error server-side but do not leak details in the response;
+      // callers cannot act on internal stack traces and unauthenticated errors
+      // could otherwise surface crypto / configuration internals.
       console.error("Unhandled error:", e);
-      return new Response(JSON.stringify({ error: "internal_error", detail: String(e) }), {
+      return new Response(JSON.stringify({ error: "internal_error" }), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
   },

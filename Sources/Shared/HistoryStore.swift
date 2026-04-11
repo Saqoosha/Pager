@@ -1,9 +1,15 @@
 import Foundation
 
 /// Read/write API for notification history, backed by per-entry JSON files
-/// inside the App Group container. Safe to call from both the main app and
-/// the Notification Service Extension because each entry lives in its own
-/// file (unique name = no write conflicts).
+/// inside the App Group container.
+///
+/// Writers:
+/// - The Notification Service Extension calls `append` when a push arrives.
+/// - The main app calls `updateDecision` when the user acts on Allow/Deny.
+/// These two writers never target the same file (append creates a new file,
+/// updateDecision overwrites an existing one), so writes don't collide.
+/// `pruneOldFiles` may race with either writer in rare cases; deletions are
+/// best-effort and tolerate already-removed files.
 enum HistoryStore {
     static let appGroupID = "group.sh.saqoo.CanopyCompanion"
     static let maxItems = 100
@@ -27,16 +33,43 @@ enum HistoryStore {
         return dir
     }
 
+    // `ISO8601DateFormatter.string(from:)` / `date(from:)` are documented as
+    // thread-safe, so sharing one instance across callers (main app + NSE) is
+    // safe. Swift 6 cannot prove this from the type, hence `nonisolated(unsafe)`.
+    nonisolated(unsafe) private static let iso8601Fractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    nonisolated(unsafe) private static let iso8601Plain: ISO8601DateFormatter = {
+        ISO8601DateFormatter()
+    }()
+
     private static func encoder() -> JSONEncoder {
         let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
+        // Fractional seconds preserve the millisecond precision used in filenames,
+        // so a round-trip through JSON does not drift the derived filename.
+        e.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(iso8601Fractional.string(from: date))
+        }
         e.outputFormatting = [.prettyPrinted, .sortedKeys]
         return e
     }
 
     private static func decoder() -> JSONDecoder {
         let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
+        d.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let str = try container.decode(String.self)
+            if let date = iso8601Fractional.date(from: str) { return date }
+            if let date = iso8601Plain.date(from: str) { return date }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid ISO8601 date: \(str)"
+            )
+        }
         return d
     }
 
@@ -50,8 +83,13 @@ enum HistoryStore {
         let dir = try historyDirectory()
         let url = dir.appendingPathComponent(filename(for: item))
         let data = try encoder().encode(item)
-        try data.write(to: url, options: .atomic)
-        try pruneOldFiles(in: dir)
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        // Pruning is best-effort: a failure here must not mask the successful write.
+        do {
+            try pruneOldFiles(in: dir)
+        } catch {
+            NSLog("HistoryStore: pruneOldFiles failed: \(error)")
+        }
     }
 
     /// Loads all history entries, newest first.
@@ -68,7 +106,7 @@ enum HistoryStore {
                 let data = try Data(contentsOf: file)
                 items.append(try dec.decode(NotificationHistoryItem.self, from: data))
             } catch {
-                // Corrupt file — skip. Could log, but this runs on every list load.
+                NSLog("HistoryStore: skipping unreadable entry \(file.lastPathComponent): \(error)")
                 continue
             }
         }
@@ -86,7 +124,7 @@ enum HistoryStore {
             at: dir,
             includingPropertiesForKeys: nil
         )
-        for file in files where file.lastPathComponent.contains("-\(id).json") {
+        for file in files where file.lastPathComponent.hasSuffix("-\(id).json") {
             try FileManager.default.removeItem(at: file)
         }
     }
@@ -106,14 +144,23 @@ enum HistoryStore {
     /// Called from the main app after the user acts on Allow/Deny/AllowAlways.
     /// No-op if the entry has already been pruned.
     static func updateDecision(requestId: String, decision: String, decidedAt: Date) throws {
-        guard var item = try item(withId: requestId) else { return }
+        // Look up the file by id rather than recomputing the filename from
+        // the loaded item — that would require preserving receivedAt at full
+        // precision through JSON and filesystem round-trips.
+        let dir = try historyDirectory()
+        let files = try FileManager.default.contentsOfDirectory(
+            at: dir,
+            includingPropertiesForKeys: nil
+        )
+        guard let url = files.first(where: { $0.lastPathComponent.hasSuffix("-\(requestId).json") }) else {
+            return
+        }
+        let data = try Data(contentsOf: url)
+        var item = try decoder().decode(NotificationHistoryItem.self, from: data)
         item.decision = decision
         item.decidedAt = decidedAt
-        // Overwrite the existing file by re-appending under the same filename.
-        let dir = try historyDirectory()
-        let url = dir.appendingPathComponent(filename(for: item))
-        let data = try encoder().encode(item)
-        try data.write(to: url, options: .atomic)
+        let newData = try encoder().encode(item)
+        try newData.write(to: url, options: [.atomic, .completeFileProtection])
     }
 
     private static func pruneOldFiles(in dir: URL) throws {
@@ -122,8 +169,9 @@ enum HistoryStore {
             includingPropertiesForKeys: [.contentModificationDateKey]
         )
         guard files.count > maxItems else { return }
-        // Sort ascending by filename (filenames begin with receivedAt millis, so
-        // lexicographic order matches chronological order).
+        // `filename(for:)` emits `<millis>-<id>.json`, so lexicographic order
+        // matches chronological order. If you change the filename format,
+        // revisit this sort.
         let sorted = files.sorted { $0.lastPathComponent < $1.lastPathComponent }
         let excess = sorted.count - maxItems
         for i in 0..<excess {

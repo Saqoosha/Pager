@@ -12,6 +12,8 @@ final class NotificationService: UNNotificationServiceExtension {
         self.bestAttempt = request.content.mutableCopy() as? UNMutableNotificationContent
 
         let userInfo = request.content.userInfo
+        // `historyId` is stored alongside `requestId` so main-app lookups also
+        // work for `/notify` pushes, which have no requestId.
         let historyId = (userInfo["requestId"] as? String) ?? UUID().uuidString
 
         let fullBody = (userInfo["toolInputFull"] as? String) ?? request.content.body
@@ -36,20 +38,22 @@ final class NotificationService: UNNotificationServiceExtension {
             NSLog("CanopyNotificationService: HistoryStore.append failed: \(error)")
         }
 
-        // Inject historyId so main app can look up this entry when the user taps.
         if let best = bestAttempt {
             var merged = best.userInfo
             merged["historyId"] = historyId
             best.userInfo = merged
             contentHandler(best)
         } else {
+            NSLog("CanopyNotificationService: mutableCopy failed — delivering original content without historyId")
             contentHandler(request.content)
         }
+        self.contentHandler = nil
     }
 
     override func serviceExtensionTimeWillExpire() {
         if let handler = contentHandler, let content = bestAttempt {
             handler(content)
+            contentHandler = nil
         }
     }
 }
