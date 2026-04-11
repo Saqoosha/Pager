@@ -109,7 +109,20 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         withCompletionHandler completionHandler: @escaping @Sendable () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        guard let requestId = userInfo["requestId"] as? String else {
+        let requestId = userInfo["requestId"] as? String
+        let historyId = (userInfo["historyId"] as? String) ?? requestId
+
+        if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            if let id = historyId {
+                Task { @MainActor in
+                    AppState.shared.pendingDetailId = id
+                }
+            }
+            completionHandler()
+            return
+        }
+
+        guard let requestId else {
             completionHandler()
             return
         }
@@ -123,18 +136,30 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         case NotificationAction.allowAlways:
             decision = "allowAlways"
         case UNNotificationDismissActionIdentifier:
-            // Dismissing notification is treated as deny
             decision = "deny"
         default:
             completionHandler()
             return
         }
 
-        // Call completionHandler immediately — Apple requires prompt return.
-        // sendDecision runs fire-and-forget with retry.
+        // Apple requires prompt return from this delegate; async work runs
+        // after the handler returns and logs its own failures.
         completionHandler()
+
+        let decidedAt = Date()
         Task {
             await NetworkService.shared.sendDecision(requestId: requestId, decision: decision)
+        }
+        Task {
+            do {
+                try HistoryStore.updateDecision(
+                    requestId: requestId,
+                    decision: decision,
+                    decidedAt: decidedAt
+                )
+            } catch {
+                NSLog("HistoryStore.updateDecision failed: \(error)")
+            }
         }
     }
 
