@@ -283,6 +283,7 @@ export default {
             },
             sound: "default",
             "interruption-level": "time-sensitive",
+            "mutable-content": 1,
           },
         };
         const pushResult = await sendPush(env, deviceToken, payload);
@@ -311,6 +312,7 @@ export default {
             sound: "default",
             category: "PERMISSION_REQUEST",
             "interruption-level": "time-sensitive",
+            "mutable-content": 1,
           },
           requestId: crypto.randomUUID(),
         };
