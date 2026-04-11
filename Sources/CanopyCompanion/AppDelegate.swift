@@ -109,7 +109,22 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         withCompletionHandler completionHandler: @escaping @Sendable () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        guard let requestId = userInfo["requestId"] as? String else {
+        let requestId = userInfo["requestId"] as? String
+        let historyId = (userInfo["historyId"] as? String) ?? requestId
+
+        // Handle plain tap: open the detail view for this notification.
+        if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            if let id = historyId {
+                Task { @MainActor in
+                    AppState.shared.pendingDetailId = id
+                }
+            }
+            completionHandler()
+            return
+        }
+
+        // Otherwise this is an action button (Allow / Deny / AllowAlways / dismiss).
+        guard let requestId else {
             completionHandler()
             return
         }
@@ -123,7 +138,6 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         case NotificationAction.allowAlways:
             decision = "allowAlways"
         case UNNotificationDismissActionIdentifier:
-            // Dismissing notification is treated as deny
             decision = "deny"
         default:
             completionHandler()
@@ -131,10 +145,23 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         }
 
         // Call completionHandler immediately — Apple requires prompt return.
-        // sendDecision runs fire-and-forget with retry.
+        // sendDecision and history update run fire-and-forget.
         completionHandler()
+
+        let decidedAt = Date()
         Task {
             await NetworkService.shared.sendDecision(requestId: requestId, decision: decision)
+        }
+        Task.detached {
+            do {
+                try HistoryStore.updateDecision(
+                    requestId: requestId,
+                    decision: decision,
+                    decidedAt: decidedAt
+                )
+            } catch {
+                NSLog("HistoryStore.updateDecision failed: \(error)")
+            }
         }
     }
 
