@@ -4,8 +4,10 @@ struct ContentView: View {
     @AppStorage("workerUrl") private var workerUrl = ""
     @AppStorage("deviceToken") private var deviceToken = ""
     @ObservedObject private var network = NetworkService.shared
+    @ObservedObject private var appState = AppState.shared
     @State private var sharedSecret = Self.loadOrMigrateSecret()
     @State private var testResult: String?
+    @State private var navPath = NavigationPath()
 
     /// Migrate sharedSecret from UserDefaults to Keychain on first launch after update
     private static func loadOrMigrateSecret() -> String {
@@ -21,7 +23,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             Form {
                 Section("Device Token") {
                     if deviceToken.isEmpty {
@@ -89,6 +91,10 @@ struct ContentView: View {
                     }
                 }
 
+                Section("History") {
+                    NavigationLink("View Notification History", value: HistoryRoute.list)
+                }
+
                 Section("How to Use") {
                     Text("""
                     1. Deploy the Cloudflare Worker
@@ -102,9 +108,24 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Canopy Companion")
+            .navigationDestination(for: HistoryRoute.self) { route in
+                switch route {
+                case .list:
+                    HistoryListView()
+                case .detail(let id):
+                    HistoryDetailView(id: id)
+                }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deviceTokenReceived)) { _ in
             // Token updated, UI will refresh via @AppStorage
+        }
+        .onChange(of: appState.pendingDetailId) { _, newValue in
+            guard let id = newValue else { return }
+            navPath = NavigationPath()
+            navPath.append(HistoryRoute.list)
+            navPath.append(HistoryRoute.detail(id))
+            appState.pendingDetailId = nil
         }
     }
 }
