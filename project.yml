@@ -15,6 +15,7 @@ targets:
     platform: iOS
     sources:
       - Sources/CanopyCompanion
+      - Sources/Shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion
@@ -27,3 +28,24 @@ targets:
       path: Sources/CanopyCompanion/CanopyCompanion.entitlements
       properties:
         aps-environment: development
+        com.apple.security.application-groups:
+          - group.sh.saqoo.CanopyCompanion
+    dependencies:
+      - target: CanopyNotificationService
+
+  CanopyNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Sources/CanopyNotificationService
+      - Sources/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion.NotificationService
+        SWIFT_STRICT_CONCURRENCY: complete
+        INFOPLIST_FILE: Sources/CanopyNotificationService/Info.plist
+    entitlements:
+      path: Sources/CanopyNotificationService/NotificationService.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.sh.saqoo.CanopyCompanion
