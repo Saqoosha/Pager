@@ -27,3 +27,5 @@ targets:
       path: Sources/CanopyCompanion/CanopyCompanion.entitlements
       properties:
         aps-environment: development
+        com.apple.security.application-groups:
+          - group.sh.saqoo.CanopyCompanion
