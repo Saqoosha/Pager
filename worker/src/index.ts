@@ -175,6 +175,13 @@ export default {
 
         const inputPreview = (body.toolInput || "").length > 200 ? body.toolInput.slice(0, 200) + "…" : (body.toolInput || "");
 
+        // Full tool input for Notification Service Extension history capture.
+        // APNs payload limit is 4KB; cap to leave headroom for the rest of the payload.
+        const MAX_FULL_INPUT = 3000;
+        const toolInputFull = (body.toolInput || "").length > MAX_FULL_INPUT
+          ? body.toolInput.slice(0, MAX_FULL_INPUT) + "…"
+          : (body.toolInput || "");
+
         const apnsPayload = {
           aps: {
             alert: {
@@ -187,6 +194,9 @@ export default {
             "mutable-content": 1,
           },
           requestId: body.requestId,
+          toolName: body.toolName,
+          toolInputFull,
+          project: body.project || "",
         };
 
         const pushResult = await sendPush(env, deviceToken, apnsPayload);
