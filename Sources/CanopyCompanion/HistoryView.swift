@@ -1,13 +1,14 @@
 import SwiftUI
 
 enum HistoryRoute: Hashable {
-    case list
     case detail(String)
+    case settings
 }
 
 struct HistoryListView: View {
     @State private var items: [NotificationHistoryItem] = []
     @State private var loadError: String?
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         List {
@@ -29,6 +30,11 @@ struct HistoryListView: View {
         }
         .navigationTitle("History")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                NavigationLink(value: HistoryRoute.settings) {
+                    Image(systemName: "gearshape")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(role: .destructive) {
                     do {
@@ -45,6 +51,9 @@ struct HistoryListView: View {
         }
         .refreshable { reload() }
         .onAppear { reload() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { reload() }
+        }
     }
 
     private func reload() {
