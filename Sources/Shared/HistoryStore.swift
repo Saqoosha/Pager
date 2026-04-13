@@ -83,7 +83,7 @@ enum HistoryStore {
         let dir = try historyDirectory()
         let url = dir.appendingPathComponent(filename(for: item))
         let data = try encoder().encode(item)
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         // Pruning is best-effort: a failure here must not mask the successful write.
         do {
             try pruneOldFiles(in: dir)
@@ -160,7 +160,7 @@ enum HistoryStore {
         item.decision = decision
         item.decidedAt = decidedAt
         let newData = try encoder().encode(item)
-        try newData.write(to: url, options: [.atomic, .completeFileProtection])
+        try newData.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 
     private static func pruneOldFiles(in dir: URL) throws {

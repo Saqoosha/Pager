@@ -11,10 +11,18 @@ struct ContentView: View {
                     switch route {
                     case .detail(let id):
                         HistoryDetailView(id: id)
+                            .id(id)
                     case .settings:
                         SettingsView()
                     }
                 }
+        }
+        .onAppear {
+            if let id = appState.pendingDetailId {
+                navPath = NavigationPath()
+                navPath.append(HistoryRoute.detail(id))
+                appState.pendingDetailId = nil
+            }
         }
         .onChange(of: appState.pendingDetailId) { _, newValue in
             guard let id = newValue else { return }
