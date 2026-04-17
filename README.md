@@ -107,7 +107,9 @@ worker/
   src/index.ts                # Cloudflare Worker (APNs JWT, request lifecycle)
   wrangler.toml               # Worker configuration
 hooks/
-  permission-request.sh       # Claude Code PermissionRequest hook
+  permission-request.sh       # Claude Code PreToolUse hook (per-project)
+  notify-notification.sh      # Claude Code Notification hook (user-global)
+  notify-stop.sh              # Claude Code Stop hook (user-global)
 ```
 
 ## Bundle ID
