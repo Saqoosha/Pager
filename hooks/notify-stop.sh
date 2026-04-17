@@ -5,7 +5,7 @@ PROJECT=$(echo "$INPUT" | jq -r '.cwd | split("/") | last')
 TRANSCRIPT=$(echo "$INPUT" | jq -r '.transcript_path // ""')
 MSG=""
 if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
-  MSG=$(jq -rs '[.[] | select(.type == "assistant") | .message.content | map(select(.type == "text") | .text) | join(" ")] | map(select(. != "")) | last // ""' "$TRANSCRIPT" \
+  MSG=$(jq -rs '[.[] | select(.type == "assistant") | .message.content | if type == "string" then [{type: "text", text: .}] else (. // []) end | map(select(.type == "text") | .text) | map(select(. != "No response requested.")) | join(" ")] | map(select(. != "")) | last // ""' "$TRANSCRIPT" 2>/dev/null \
     | sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' | sed -E 's/^#{1,6} //g' | sed 's/\*\*//g' | sed 's/[*`_~]//g' | sed -E 's/^[>-] //g' | sed 's/|//g' | sed -E 's/^[[:space:]]*---*[[:space:]]*$//g' | tr '\n' ' ' | sed -E 's/ +/ /g' | sed 's/^ //;s/ $//' | cut -c1-200)
 fi
 
