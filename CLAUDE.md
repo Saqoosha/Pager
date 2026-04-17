@@ -38,10 +38,12 @@ cd worker && wrangler deploy
 
 ## Hooks
 
-One hook script in `hooks/` directory:
-- `permission-request.sh` — sends permission request to worker, polls for decision (120s timeout)
+Three hook scripts in `hooks/` directory:
+- `permission-request.sh` — sends permission request to worker, polls for decision (120s timeout). Wired per-project via `.claude/settings.json` `PreToolUse` hook
+- `notify-notification.sh` — user-global Claude Code `Notification` hook. Title is `[<project>] Permission Needed / Waiting / Notification`
+- `notify-stop.sh` — user-global Claude Code `Stop` hook. Body is the last assistant text from the transcript (first 200 chars). Falls back to `"Done"` when the transcript has no text block
 
-Notification and Stop hooks live in `~/.claude/hooks/` and use the `/notify` endpoint
+All three hit the worker's `/notify` or `/permission-request` endpoint. `notify-*.sh` must be installed to `~/.claude/hooks/` and wired via `~/.claude/settings.json` to fire for every project — symlink from this repo to keep both in sync.
 
 ## Credentials
 
