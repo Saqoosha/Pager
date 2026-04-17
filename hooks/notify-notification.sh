@@ -4,6 +4,11 @@ TYPE=$(echo "$INPUT" | jq -r '.notification_type // "unknown"')
 MSG=$(echo "$INPUT" | jq -r '.message // "Claude needs attention"' | sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' | sed -E 's/^#{1,6} //g' | sed 's/\*\*//g' | sed 's/[*`_~]//g' | sed -E 's/^[>-] //g' | sed 's/|//g' | sed -E 's/^[[:space:]]*---*[[:space:]]*$//g' | tr '\n' ' ' | sed -E 's/ +/ /g' | sed 's/^ //;s/ $//')
 PROJECT=$(echo "$INPUT" | jq -r '.cwd | split("/") | last')
 
+# Skip claude-mem's background observer sessions — their notifications are noise.
+if [ "$PROJECT" = "observer-sessions" ]; then
+  exit 0
+fi
+
 case "$TYPE" in
   permission_prompt)
     TITLE="[$PROJECT] Permission Needed"
