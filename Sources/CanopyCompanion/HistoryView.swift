@@ -87,7 +87,7 @@ private struct HistoryRow: View {
             Text(item.title)
                 .font(.subheadline.bold())
                 .lineLimit(2)
-            Text(item.body)
+            Text(NotificationHistoryItem.displayableBody(item.body))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
@@ -149,7 +149,7 @@ struct HistoryDetailView: View {
                             }
                         }
                         Divider()
-                        Text(item.body)
+                        Text(NotificationHistoryItem.displayableBody(item.body))
                             .font(.system(.body, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,7 +161,7 @@ struct HistoryDetailView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            UIPasteboard.general.string = item.body
+                            UIPasteboard.general.string = NotificationHistoryItem.displayableBody(item.body)
                         } label: {
                             Image(systemName: "doc.on.doc")
                         }

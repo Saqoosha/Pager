@@ -41,4 +41,11 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         self.decision = decision
         self.decidedAt = decidedAt
     }
+
+    /// Jq and some pipelines pass through the four ASCII letters `null` as the
+    /// string when a JSON `null` is stringified. Treat that as no body for display.
+    static func displayableBody(_ body: String) -> String {
+        if body == "null" { return "" }
+        return body
+    }
 }
