@@ -27,6 +27,10 @@ if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
   fi
 fi
 
+# jq -r / jq -rs print the four characters "null" when the filter yields JSON
+# null; that is a non-empty string, so the Done fallback above would be skipped.
+[ "$MSG" = "null" ] && MSG=""
+
 [ -z "$MSG" ] && MSG="Done"
 
 WORKER_URL="${CANOPY_COMPANION_WORKER_URL}"
