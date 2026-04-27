@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct CanopyCompanionApp: App {
+struct PagerApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

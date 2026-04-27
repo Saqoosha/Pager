@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainHelper {
-    private static let service = "sh.saqoo.CanopyCompanion"
+    private static let service = "sh.saqoo.Pager"
 
     static func save(key: String, value: String) {
         guard let data = value.data(using: .utf8) else { return }

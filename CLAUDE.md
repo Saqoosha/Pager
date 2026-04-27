@@ -1,9 +1,10 @@
-# Canopy Companion
+# Pager
 
 ## Project Overview
 
-iOS app + Cloudflare Worker for managing Claude Code permission requests via push notifications.
-Users approve/deny tool permissions from iPhone lock screen or Apple Watch.
+iOS app + Cloudflare Worker for managing AI coding agent permission requests
+via push notifications. Users approve/deny tool permissions from iPhone lock
+screen or Apple Watch.
 
 Stop/done notifications are also supported for **Codex CLI** and **Cursor**
 (IDE Agent only). Per-CLI sender avatars are rendered as Apple Communication
@@ -24,7 +25,7 @@ Notifications, giving the lock-screen banner a Slack-style "from Claude Code"
 xcodegen generate
 
 # Build for device "S"
-xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 
 # Install to device
@@ -52,9 +53,9 @@ All three hit the worker's `/notify` or `/permission-request` endpoint. `notify-
 
 ## Communication Notifications
 
-The notification service extension donates an `INSendMessageIntent` per push so iOS renders the lock-screen banner with a sender avatar. APNs payload carries `source: "claude" | "codex" | "cursor"`; the extension picks the matching PNG from `Sources/CanopyNotificationService/Avatars/`.
+The notification service extension donates an `INSendMessageIntent` per push so iOS renders the lock-screen banner with a sender avatar. APNs payload carries `source: "claude" | "codex" | "cursor"`; the extension picks the matching PNG from `Sources/PagerNotificationService/Avatars/`.
 
-This requires the `com.apple.developer.usernotifications.communication` entitlement on the main app target only — the Service Extension does not need it (and Xcode does not expose the capability for extension targets). **No Apple approval form is needed** — it's a free capability — but `xcodebuild -allowProvisioningUpdates` cannot enable it via CLI alone. Open the project in Xcode once and add *Communication Notifications* capability to the **CanopyCompanion** target via Signing & Capabilities; Xcode then registers it on the App ID and subsequent CLI builds succeed. If the entitlement is missing the extension still works — it falls back to a `UNNotificationAttachment` thumbnail.
+This requires the `com.apple.developer.usernotifications.communication` entitlement on the main app target only — the Service Extension does not need it (and Xcode does not expose the capability for extension targets). **No Apple approval form is needed** — it's a free capability — but `xcodebuild -allowProvisioningUpdates` cannot enable it via CLI alone. Open the project in Xcode once and add *Communication Notifications* capability to the **Pager** target via Signing & Capabilities; Xcode then registers it on the App ID and subsequent CLI builds succeed. If the entitlement is missing the extension still works — it falls back to a `UNNotificationAttachment` thumbnail.
 
 ## Credentials
 
@@ -63,5 +64,6 @@ This requires the `com.apple.developer.usernotifications.communication` entitlem
 
 ## Environment Variables
 
-- `CANOPY_COMPANION_WORKER_URL` — Worker endpoint URL
-- `CANOPY_COMPANION_SECRET` — Shared secret for auth
+- `PAGER_WORKER_URL` — Worker endpoint URL
+- `PAGER_SECRET` — Shared secret for auth
+- `PAGER_LOG_DIR` — Optional override for `notify-stop.sh` log location (default `~/Library/Logs/Pager`)

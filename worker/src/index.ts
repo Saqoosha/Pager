@@ -11,7 +11,7 @@ interface Env {
 type Decision = "allow" | "deny" | "allowAlways";
 const VALID_DECISIONS: Decision[] = ["allow", "deny", "allowAlways"];
 
-// Mirrored in Sources/CanopyNotificationService/NotificationService.swift
+// Mirrored in Sources/PagerNotificationService/NotificationService.swift
 // (NotificationSource) and hooks/notify-stop.sh (--source argument).
 const VALID_SOURCES = ["claude", "codex", "cursor"] as const;
 type Source = (typeof VALID_SOURCES)[number];
@@ -298,7 +298,7 @@ export default {
         const payload: Record<string, unknown> = {
           aps: {
             alert: {
-              title: body.title || "Canopy Companion",
+              title: body.title || "Pager",
               body: body.message || "",
             },
             sound: "default",
@@ -327,7 +327,7 @@ export default {
         const testPayload = {
           aps: {
             alert: {
-              title: "Canopy Companion",
+              title: "Pager",
               body: "テスト通知。ボタンが表示されるか確認。",
             },
             sound: "default",
