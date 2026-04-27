@@ -11,6 +11,11 @@ interface Env {
 type Decision = "allow" | "deny" | "allowAlways";
 const VALID_DECISIONS: Decision[] = ["allow", "deny", "allowAlways"];
 
+// Mirrored in Sources/CanopyNotificationService/NotificationService.swift
+// (NotificationSource) and hooks/notify-stop.sh (--source argument).
+const VALID_SOURCES = ["claude", "codex", "cursor"] as const;
+type Source = (typeof VALID_SOURCES)[number];
+
 interface PendingRequest {
   requestId: string;
   toolName: string;
@@ -277,13 +282,20 @@ export default {
 
       // POST /notify — send plain notification (no action buttons)
       if (path === "/notify" && request.method === "POST") {
-        const body = await parseJSON<{ title: string; message: string }>(request);
+        const body = await parseJSON<{ title: string; message: string; source?: string }>(request);
         if (!body) return badRequest("invalid JSON body");
+        // Allowlist source server-side so the extension can trust it without
+        // re-validating. Reject typos loudly to match the /response style
+        // rather than silently dropping an avatar.
+        if (body.source !== undefined && !VALID_SOURCES.includes(body.source as Source)) {
+          return badRequest(`invalid source: must be one of ${VALID_SOURCES.join(", ")}`);
+        }
+        const source = body.source as Source | undefined;
         const deviceToken = await env.REQUESTS.get("device_token");
         if (!deviceToken) {
           return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
         }
-        const payload = {
+        const payload: Record<string, unknown> = {
           aps: {
             alert: {
               title: body.title || "Canopy Companion",
@@ -294,6 +306,7 @@ export default {
             "mutable-content": 1,
           },
         };
+        if (source) payload.source = source;
         const pushResult = await sendPush(env, deviceToken, payload);
         if (!pushResult.ok) {
           const err = await pushResult.text();
