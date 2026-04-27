@@ -83,24 +83,63 @@ private struct HistoryRow: View {
     let item: NotificationHistoryItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(item.title)
-                .font(.subheadline.bold())
-                .lineLimit(2)
-            Text(NotificationHistoryItem.displayableBody(item.body))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-            HStack(spacing: 8) {
-                Text(item.receivedAt, style: .relative)
-                    .font(.caption2)
+        HStack(alignment: .top, spacing: 12) {
+            SourceAvatar(source: item.source)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.subheadline.bold())
+                    .lineLimit(2)
+                Text(NotificationHistoryItem.displayableBody(item.body))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                if let decision = item.decision {
-                    DecisionBadge(decision: decision)
+                    .lineLimit(2)
+                HStack(spacing: 8) {
+                    Text(item.receivedAt, style: .relative)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    if let decision = item.decision {
+                        DecisionBadge(decision: decision)
+                    }
                 }
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Per-CLI sender avatar for the history list. Falls back to a generic SF
+/// Symbol when the source is missing (legacy items or `/request` pushes
+/// without `source` set).
+private struct SourceAvatar: View {
+    let source: String?
+    private let size: CGFloat = 36
+
+    var body: some View {
+        Group {
+            if let assetName, let image = UIImage(named: assetName) {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Image(systemName: "bell.fill")
+                    .font(.system(size: size * 0.45))
+                    .foregroundStyle(.secondary)
+                    .frame(width: size, height: size)
+                    .background(Color.secondary.opacity(0.15))
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var assetName: String? {
+        guard let source else { return nil }
+        switch source.lowercased() {
+        case "claude", "claude-code", "claudecode": return "claude"
+        case "codex":  return "codex"
+        case "cursor": return "cursor"
+        default: return nil
+        }
     }
 }
 
@@ -137,15 +176,18 @@ struct HistoryDetailView: View {
             if let item {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.title).font(.headline)
-                            Text(item.receivedAt.formatted(date: .abbreviated, time: .standard))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            if let decision = item.decision {
-                                Label(decision, systemImage: icon(for: decision))
-                                    .foregroundStyle(color(for: decision))
-                                    .font(.subheadline)
+                        HStack(alignment: .center, spacing: 12) {
+                            SourceAvatar(source: item.source)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.title).font(.headline)
+                                Text(item.receivedAt.formatted(date: .abbreviated, time: .standard))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                if let decision = item.decision {
+                                    Label(decision, systemImage: icon(for: decision))
+                                        .foregroundStyle(color(for: decision))
+                                        .font(.subheadline)
+                                }
                             }
                         }
                         Divider()

@@ -15,6 +15,10 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
     let project: String?
     let toolName: String?
     let requestId: String?
+    /// Optional CLI identifier (`claude` / `codex` / `cursor`) so the main
+    /// app can render the matching avatar in the history list. Optional
+    /// because items written before this field was added need to decode.
+    let source: String?
     var decision: String?
     var decidedAt: Date?
 
@@ -27,6 +31,7 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         project: String? = nil,
         toolName: String? = nil,
         requestId: String? = nil,
+        source: String? = nil,
         decision: String? = nil,
         decidedAt: Date? = nil
     ) {
@@ -38,6 +43,7 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         self.project = project
         self.toolName = toolName
         self.requestId = requestId
+        self.source = source
         self.decision = decision
         self.decidedAt = decidedAt
     }

@@ -7,19 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		026E7D152A54EF693FA61DFB /* claude.png in Resources */ = {isa = PBXBuildFile; fileRef = 8F264B66DA1D0FF5C7832D12 /* claude.png */; };
 		0888C47E56011E5C74966EC7 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10DCD44FD818ABD1AAF558CA /* HistoryStore.swift */; };
 		0CEF4785E765F4005F7C4EBF /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBAF11DB9525E96910A019 /* NotificationService.swift */; };
 		13B72117E2420D244E7B64EF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DE886DEC2C3D07A41EFDFB /* ContentView.swift */; };
 		2524AEA9314BA21D5D49AE73 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C23A7CF72A01185880D42B1 /* Assets.xcassets */; };
+		2F96A8A3E341D719119C8738 /* claude.png in Resources */ = {isa = PBXBuildFile; fileRef = 8F264B66DA1D0FF5C7832D12 /* claude.png */; };
 		6A22D0CB1084F0AFE2CC2126 /* NotificationHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D08E44E9252B6446E862B76 /* NotificationHistoryItem.swift */; };
 		728963698E09C1523AC58D33 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D42C34C84024FB8C6513B7E1 /* NetworkService.swift */; };
 		76F8DDD83475CDFAAC059A50 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F37C1F9F263E0AFFD4A17614 /* AppDelegate.swift */; };
+		A29D0A1077758A3DE010AB04 /* codex.png in Resources */ = {isa = PBXBuildFile; fileRef = 91D58ADEABE5CE6FE12EC77F /* codex.png */; };
 		A3DFDAFACE7746FC4D102163 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10DCD44FD818ABD1AAF558CA /* HistoryStore.swift */; };
 		C94A4A0E7B3C4E3966E49167 /* CanopyNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B86C7DBC8924A2213976772B /* CanopyNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CA76F2F30AAF72108C4FB34D /* NotificationHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D08E44E9252B6446E862B76 /* NotificationHistoryItem.swift */; };
 		CCA30633BBA6C1FDBF9D0902 /* CanopyCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F3DC41D8266E711911BA77 /* CanopyCompanionApp.swift */; };
+		CEBAF5543D0E874A46FA5788 /* codex.png in Resources */ = {isa = PBXBuildFile; fileRef = 91D58ADEABE5CE6FE12EC77F /* codex.png */; };
+		CF1BA2A8F172D2040146265B /* cursor.png in Resources */ = {isa = PBXBuildFile; fileRef = 63CC20321B88AB0694BE1A26 /* cursor.png */; };
 		EC86F7E395AA082830A7E5E3 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8013DEE557ED7CCB706B484 /* HistoryView.swift */; };
 		ED477BAA5CA564B7BF87568F /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13EFA404754FF36771B4735E /* KeychainHelper.swift */; };
+		FEEFBC80177E58A76FD3BAE6 /* cursor.png in Resources */ = {isa = PBXBuildFile; fileRef = 63CC20321B88AB0694BE1A26 /* cursor.png */; };
 		FF5787CCE71AF75313F48B39 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B4C826D9ECCFFC91998FFF1 /* AppState.swift */; };
 /* End PBXBuildFile section */
 
@@ -54,9 +60,13 @@
 		1CEBAF11DB9525E96910A019 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		20DE886DEC2C3D07A41EFDFB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5C23A7CF72A01185880D42B1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5FBDB35CCC52B6B186BFA87D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		63CC20321B88AB0694BE1A26 /* cursor.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = cursor.png; sourceTree = "<group>"; };
 		67B5EB141F9F440703BEDF5F /* NotificationService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationService.entitlements; sourceTree = "<group>"; };
 		6B4C826D9ECCFFC91998FFF1 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		7A87DAC448460F2BC2A8EB21 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8F264B66DA1D0FF5C7832D12 /* claude.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = claude.png; sourceTree = "<group>"; };
+		91D58ADEABE5CE6FE12EC77F /* codex.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = codex.png; sourceTree = "<group>"; };
 		9D08E44E9252B6446E862B76 /* NotificationHistoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationHistoryItem.swift; sourceTree = "<group>"; };
 		B86C7DBC8924A2213976772B /* CanopyNotificationService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = CanopyNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE7C2DB31AF9139CD3274B7D /* CanopyCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CanopyCompanion.entitlements; sourceTree = "<group>"; };
@@ -77,6 +87,7 @@
 				F3F3DC41D8266E711911BA77 /* CanopyCompanionApp.swift */,
 				20DE886DEC2C3D07A41EFDFB /* ContentView.swift */,
 				D8013DEE557ED7CCB706B484 /* HistoryView.swift */,
+				5FBDB35CCC52B6B186BFA87D /* Info.plist */,
 				13EFA404754FF36771B4735E /* KeychainHelper.swift */,
 				D42C34C84024FB8C6513B7E1 /* NetworkService.swift */,
 			);
@@ -94,6 +105,17 @@
 			path = Sources/Shared;
 			sourceTree = "<group>";
 		};
+		8A3F223DFD868ED0127D1E36 /* Avatars */ = {
+			isa = PBXGroup;
+			children = (
+				8F264B66DA1D0FF5C7832D12 /* claude.png */,
+				91D58ADEABE5CE6FE12EC77F /* codex.png */,
+				63CC20321B88AB0694BE1A26 /* cursor.png */,
+			);
+			name = Avatars;
+			path = Sources/CanopyNotificationService/Avatars;
+			sourceTree = "<group>";
+		};
 		D2D0D51E2D568FAE20D5D9C9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -109,6 +131,7 @@
 				7A87DAC448460F2BC2A8EB21 /* Info.plist */,
 				67B5EB141F9F440703BEDF5F /* NotificationService.entitlements */,
 				1CEBAF11DB9525E96910A019 /* NotificationService.swift */,
+				8A3F223DFD868ED0127D1E36 /* Avatars */,
 			);
 			name = CanopyNotificationService;
 			path = Sources/CanopyNotificationService;
@@ -117,6 +140,7 @@
 		FF4E27590322B6B18D0A99EB = {
 			isa = PBXGroup;
 			children = (
+				8A3F223DFD868ED0127D1E36 /* Avatars */,
 				13B011E9A07CDB86FCB1C92D /* CanopyCompanion */,
 				E08BBD170F494B31F1AEF361 /* CanopyNotificationService */,
 				6B7BAB6F434D10B8150EB6B0 /* Shared */,
@@ -132,6 +156,7 @@
 			buildConfigurationList = BB5291F8E3223A9F9CC43958 /* Build configuration list for PBXNativeTarget "CanopyNotificationService" */;
 			buildPhases = (
 				0E71C292B303774F49347261 /* Sources */,
+				5EC4BDF56B77CFDB2E5C5458 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -202,11 +227,24 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		5EC4BDF56B77CFDB2E5C5458 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				026E7D152A54EF693FA61DFB /* claude.png in Resources */,
+				A29D0A1077758A3DE010AB04 /* codex.png in Resources */,
+				FEEFBC80177E58A76FD3BAE6 /* cursor.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FF57BA93F72D3AF9140009F4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				2524AEA9314BA21D5D49AE73 /* Assets.xcassets in Resources */,
+				2F96A8A3E341D719119C8738 /* claude.png in Resources */,
+				CEBAF5543D0E874A46FA5788 /* codex.png in Resources */,
+				CF1BA2A8F172D2040146265B /* cursor.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,10 +436,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sources/CanopyCompanion/CanopyCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Canopy Companion";
-				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_FILE = Sources/CanopyCompanion/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -419,10 +454,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sources/CanopyCompanion/CanopyCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Canopy Companion";
-				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_FILE = Sources/CanopyCompanion/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
