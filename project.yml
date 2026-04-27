@@ -16,18 +16,20 @@ targets:
     sources:
       - Sources/CanopyCompanion
       - Sources/Shared
+      # Avatars are also bundled with the extension; main app needs the same
+      # PNGs to render per-source icons in the History list.
+      - path: Sources/CanopyNotificationService/Avatars
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion
         SWIFT_STRICT_CONCURRENCY: complete
-        GENERATE_INFOPLIST_FILE: true
-        INFOPLIST_KEY_UILaunchScreen_Generation: true
-        INFOPLIST_KEY_CFBundleDisplayName: Canopy Companion
-        INFOPLIST_KEY_UIBackgroundModes: remote-notification
+        INFOPLIST_FILE: Sources/CanopyCompanion/Info.plist
     entitlements:
       path: Sources/CanopyCompanion/CanopyCompanion.entitlements
       properties:
         aps-environment: development
+        com.apple.developer.usernotifications.communication: true
         com.apple.security.application-groups:
           - group.sh.saqoo.CanopyCompanion
     dependencies:
