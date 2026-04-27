@@ -11,7 +11,7 @@
 set -euo pipefail
 
 REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
-OUT="$REPO_ROOT/Sources/CanopyNotificationService/Avatars"
+OUT="$REPO_ROOT/Sources/PagerNotificationService/Avatars"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 

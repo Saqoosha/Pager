@@ -4,7 +4,7 @@
 
 **Goal:** Add an in-app notification history view so users can read the full text of notifications that were truncated in the alert, using a Notification Service Extension to capture every push regardless of user interaction.
 
-**Architecture:** A new iOS app extension (`CanopyNotificationService`) intercepts pushes via `UNNotificationServiceExtension.didReceive`, writes a JSON history entry to a shared App Group container, and injects a `historyId` into the notification's userInfo. The main app reads entries from the container, displays them in `HistoryListView` / `HistoryDetailView`, and on tap navigates straight to the relevant detail. The Worker gains two new payload fields (`toolInputFull`, `toolName`, `project`) so the extension can capture full content, and `/notify` + `/test` get `mutable-content: 1` so the extension is invoked.
+**Architecture:** A new iOS app extension (`PagerNotificationService`) intercepts pushes via `UNNotificationServiceExtension.didReceive`, writes a JSON history entry to a shared App Group container, and injects a `historyId` into the notification's userInfo. The main app reads entries from the container, displays them in `HistoryListView` / `HistoryDetailView`, and on tap navigates straight to the relevant detail. The Worker gains two new payload fields (`toolInputFull`, `toolName`, `project`) so the extension can capture full content, and `/notify` + `/test` get `mutable-content: 1` so the extension is invoked.
 
 **Tech Stack:** Swift 6 (strict concurrency), SwiftUI, `UNNotificationServiceExtension`, App Groups, XcodeGen (`project.yml`), TypeScript Cloudflare Worker, `wrangler`.
 
@@ -33,7 +33,7 @@ Open `docs/superpowers/specs/2026-04-11-notification-history-design.md` and read
 Run:
 ```bash
 xcodegen generate
-xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 ```
 Expected: build succeeds. This is your baseline — if anything breaks during implementation, compare against this state.
@@ -90,7 +90,7 @@ Run in one terminal: `cd worker && bun run dev`
 In another terminal, source the secret and hit it with a long payload to verify the new shape:
 ```bash
 curl -s -X POST http://localhost:8787/request \
-  -H "Authorization: Bearer $CANOPY_COMPANION_SECRET" \
+  -H "Authorization: Bearer $PAGER_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"requestId":"test-1","toolName":"Bash","project":"demo","toolInput":"'"$(python3 -c 'print("X"*500)')"'"}'
 ```
@@ -122,7 +122,7 @@ In `worker/src/index.ts`, inside the `/notify` handler, replace the existing `pa
         const payload = {
           aps: {
             alert: {
-              title: body.title || "Canopy Companion",
+              title: body.title || "Pager",
               body: body.message || "",
             },
             sound: "default",
@@ -140,7 +140,7 @@ Replace the existing `testPayload` block with:
         const testPayload = {
           aps: {
             alert: {
-              title: "Canopy Companion",
+              title: "Pager",
               body: "テスト通知。ボタンが表示されるか確認。",
             },
             sound: "default",
@@ -170,11 +170,11 @@ Expected: only `worker/src/index.ts` staged. Pause for user approval before comm
 ## Task 3: Add App Group to main app entitlements
 
 **Files:**
-- Modify: `Sources/CanopyCompanion/CanopyCompanion.entitlements`
+- Modify: `Sources/Pager/Pager.entitlements`
 
 - [ ] **Step 1: Add the App Group key**
 
-Replace the entire contents of `Sources/CanopyCompanion/CanopyCompanion.entitlements` with:
+Replace the entire contents of `Sources/Pager/Pager.entitlements` with:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -185,7 +185,7 @@ Replace the entire contents of `Sources/CanopyCompanion/CanopyCompanion.entitlem
 	<string>development</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.sh.saqoo.CanopyCompanion</string>
+		<string>group.sh.saqoo.Pager</string>
 	</array>
 </dict>
 </plist>
@@ -193,14 +193,14 @@ Replace the entire contents of `Sources/CanopyCompanion/CanopyCompanion.entitlem
 
 - [ ] **Step 2: Create the App Group in Apple Developer Portal (one-time, manual)**
 
-Open https://developer.apple.com/account/resources/identifiers/list/applicationGroup and create `group.sh.saqoo.CanopyCompanion` if it doesn't already exist. Assign it to the `sh.saqoo.CanopyCompanion` App ID (and to `sh.saqoo.CanopyCompanion.NotificationService` when it exists — Task 5).
+Open https://developer.apple.com/account/resources/identifiers/list/applicationGroup and create `group.sh.saqoo.Pager` if it doesn't already exist. Assign it to the `sh.saqoo.Pager` App ID (and to `sh.saqoo.Pager.NotificationService` when it exists — Task 5).
 
 If you cannot access the portal right now, `-allowProvisioningUpdates` in `xcodebuild` usually creates the group on first build. If that fails later, come back here.
 
 - [ ] **Step 3: Stage changes**
 
 ```bash
-git add Sources/CanopyCompanion/CanopyCompanion.entitlements
+git add Sources/Pager/Pager.entitlements
 git status
 ```
 Pause for approval.
@@ -295,7 +295,7 @@ import Foundation
 /// the Notification Service Extension because each entry lives in its own
 /// file (unique name = no write conflicts).
 enum HistoryStore {
-    static let appGroupID = "group.sh.saqoo.CanopyCompanion"
+    static let appGroupID = "group.sh.saqoo.Pager"
     static let maxItems = 100
 
     enum StoreError: Error {
@@ -436,18 +436,18 @@ Pause for approval.
 ## Task 6: Create the Notification Service Extension target
 
 **Files:**
-- Create: `Sources/CanopyNotificationService/NotificationService.swift`
-- Create: `Sources/CanopyNotificationService/NotificationService.entitlements`
-- Create: `Sources/CanopyNotificationService/Info.plist`
+- Create: `Sources/PagerNotificationService/NotificationService.swift`
+- Create: `Sources/PagerNotificationService/NotificationService.entitlements`
+- Create: `Sources/PagerNotificationService/Info.plist`
 - Modify: `project.yml`
 
 - [ ] **Step 1: Create the directory**
 
-Run: `mkdir -p Sources/CanopyNotificationService`
+Run: `mkdir -p Sources/PagerNotificationService`
 
 - [ ] **Step 2: Write the extension entitlements file**
 
-Create `Sources/CanopyNotificationService/NotificationService.entitlements`:
+Create `Sources/PagerNotificationService/NotificationService.entitlements`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -456,7 +456,7 @@ Create `Sources/CanopyNotificationService/NotificationService.entitlements`:
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.sh.saqoo.CanopyCompanion</string>
+		<string>group.sh.saqoo.Pager</string>
 	</array>
 </dict>
 </plist>
@@ -466,7 +466,7 @@ Create `Sources/CanopyNotificationService/NotificationService.entitlements`:
 
 `INFOPLIST_KEY_NSExtension` via XcodeGen is unreliable because `NSExtension` is a nested dictionary. Use an explicit `Info.plist` file instead.
 
-Create `Sources/CanopyNotificationService/Info.plist`:
+Create `Sources/PagerNotificationService/Info.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -476,7 +476,7 @@ Create `Sources/CanopyNotificationService/Info.plist`:
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Canopy Notification Service</string>
+	<string>Pager Notification Service</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -504,7 +504,7 @@ Create `Sources/CanopyNotificationService/Info.plist`:
 
 - [ ] **Step 4: Write the extension source**
 
-Create `Sources/CanopyNotificationService/NotificationService.swift`:
+Create `Sources/PagerNotificationService/NotificationService.swift`:
 
 ```swift
 import UserNotifications
@@ -542,7 +542,7 @@ final class NotificationService: UNNotificationServiceExtension {
             try HistoryStore.append(item)
         } catch {
             // Non-fatal: continue delivering the notification even if write fails.
-            NSLog("CanopyNotificationService: HistoryStore.append failed: \(error)")
+            NSLog("PagerNotificationService: HistoryStore.append failed: \(error)")
         }
 
         // Inject historyId so main app can look up this entry when the user taps.
@@ -566,63 +566,63 @@ final class NotificationService: UNNotificationServiceExtension {
 
 - [ ] **Step 5: Add the extension target to `project.yml`**
 
-Open `project.yml`. Under `targets:`, after the existing `CanopyCompanion:` block, add both the shared sources entry on the main target and a new extension target. Replace the entire `targets:` section with:
+Open `project.yml`. Under `targets:`, after the existing `Pager:` block, add both the shared sources entry on the main target and a new extension target. Replace the entire `targets:` section with:
 
 ```yaml
 targets:
-  CanopyCompanion:
+  Pager:
     type: application
     platform: iOS
     sources:
-      - Sources/CanopyCompanion
+      - Sources/Pager
       - Sources/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager
         SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
-        INFOPLIST_KEY_CFBundleDisplayName: Canopy Companion
+        INFOPLIST_KEY_CFBundleDisplayName: Pager
         INFOPLIST_KEY_UIBackgroundModes: remote-notification
     entitlements:
-      path: Sources/CanopyCompanion/CanopyCompanion.entitlements
+      path: Sources/Pager/Pager.entitlements
       properties:
         aps-environment: development
         com.apple.security.application-groups:
-          - group.sh.saqoo.CanopyCompanion
+          - group.sh.saqoo.Pager
     dependencies:
-      - target: CanopyNotificationService
+      - target: PagerNotificationService
 
-  CanopyNotificationService:
+  PagerNotificationService:
     type: app-extension
     platform: iOS
     sources:
-      - Sources/CanopyNotificationService
+      - Sources/PagerNotificationService
       - Sources/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion.NotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager.NotificationService
         SWIFT_STRICT_CONCURRENCY: complete
-        INFOPLIST_FILE: Sources/CanopyNotificationService/Info.plist
+        INFOPLIST_FILE: Sources/PagerNotificationService/Info.plist
     entitlements:
-      path: Sources/CanopyNotificationService/NotificationService.entitlements
+      path: Sources/PagerNotificationService/NotificationService.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.sh.saqoo.CanopyCompanion
+          - group.sh.saqoo.Pager
 ```
 
-Note: the `dependencies: - target: CanopyNotificationService` line on the main app target is what causes XcodeGen to embed the extension into the app bundle. The main app keeps `GENERATE_INFOPLIST_FILE: true`; only the extension uses an explicit Info.plist.
+Note: the `dependencies: - target: PagerNotificationService` line on the main app target is what causes XcodeGen to embed the extension into the app bundle. The main app keeps `GENERATE_INFOPLIST_FILE: true`; only the extension uses an explicit Info.plist.
 
 - [ ] **Step 6: Regenerate the Xcode project**
 
 Run: `xcodegen generate`
-Expected: output lists both targets (`CanopyCompanion`, `CanopyNotificationService`) and no errors.
+Expected: output lists both targets (`Pager`, `PagerNotificationService`) and no errors.
 
 - [ ] **Step 7: Build**
 
 Run:
 ```bash
-xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 ```
 Expected: both targets compile. The first build may take longer while Xcode provisions the new extension. If signing fails, check that the App Group from Task 3 Step 2 exists in the Apple Developer Portal and is assigned to both bundle IDs.
@@ -630,21 +630,21 @@ Expected: both targets compile. The first build may take longer while Xcode prov
 - [ ] **Step 8: Stage changes**
 
 ```bash
-git add project.yml Sources/CanopyNotificationService/
+git add project.yml Sources/PagerNotificationService/
 git status
 ```
-`CanopyCompanion.xcodeproj/` is a generated artifact — do not stage it (it's regenerated by `xcodegen`). Pause for approval.
+`Pager.xcodeproj/` is a generated artifact — do not stage it (it's regenerated by `xcodegen`). Pause for approval.
 
 ---
 
 ## Task 7: Main app — `AppState` for deep-link navigation
 
 **Files:**
-- Create: `Sources/CanopyCompanion/AppState.swift`
+- Create: `Sources/Pager/AppState.swift`
 
 - [ ] **Step 1: Write the state holder**
 
-Create `Sources/CanopyCompanion/AppState.swift`:
+Create `Sources/Pager/AppState.swift`:
 
 ```swift
 import Foundation
@@ -666,7 +666,7 @@ final class AppState: ObservableObject {
 
 ```bash
 xcodegen generate
-xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 ```
 Expected: succeeds.
@@ -674,7 +674,7 @@ Expected: succeeds.
 - [ ] **Step 3: Stage changes**
 
 ```bash
-git add Sources/CanopyCompanion/AppState.swift
+git add Sources/Pager/AppState.swift
 git status
 ```
 Pause for approval.
@@ -684,11 +684,11 @@ Pause for approval.
 ## Task 8: Main app — `HistoryListView` and `HistoryDetailView`
 
 **Files:**
-- Create: `Sources/CanopyCompanion/HistoryView.swift`
+- Create: `Sources/Pager/HistoryView.swift`
 
 - [ ] **Step 1: Write the views and route enum**
 
-Create `Sources/CanopyCompanion/HistoryView.swift`:
+Create `Sources/Pager/HistoryView.swift`:
 
 ```swift
 import SwiftUI
@@ -892,7 +892,7 @@ struct HistoryDetailView: View {
 
 ```bash
 xcodegen generate
-xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 ```
 Expected: succeeds.
@@ -900,7 +900,7 @@ Expected: succeeds.
 - [ ] **Step 3: Stage changes**
 
 ```bash
-git add Sources/CanopyCompanion/HistoryView.swift
+git add Sources/Pager/HistoryView.swift
 git status
 ```
 Pause for approval.
@@ -910,11 +910,11 @@ Pause for approval.
 ## Task 9: Main app — wire history into `ContentView` with path-based navigation
 
 **Files:**
-- Modify: `Sources/CanopyCompanion/ContentView.swift`
+- Modify: `Sources/Pager/ContentView.swift`
 
 - [ ] **Step 1: Convert `NavigationStack` to path-based form and add History section**
 
-Edit `Sources/CanopyCompanion/ContentView.swift`. Replace the entire file with:
+Edit `Sources/Pager/ContentView.swift`. Replace the entire file with:
 
 ```swift
 import SwiftUI
@@ -1026,7 +1026,7 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Canopy Companion")
+            .navigationTitle("Pager")
             .navigationDestination(for: HistoryRoute.self) { route in
                 switch route {
                 case .list:
@@ -1054,7 +1054,7 @@ struct ContentView: View {
 
 ```bash
 xcodegen generate
-xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 ```
 Expected: succeeds.
@@ -1062,7 +1062,7 @@ Expected: succeeds.
 - [ ] **Step 3: Stage changes**
 
 ```bash
-git add Sources/CanopyCompanion/ContentView.swift
+git add Sources/Pager/ContentView.swift
 git status
 ```
 Pause for approval.
@@ -1072,11 +1072,11 @@ Pause for approval.
 ## Task 10: Main app — handle notification tap and record decision in history
 
 **Files:**
-- Modify: `Sources/CanopyCompanion/AppDelegate.swift`
+- Modify: `Sources/Pager/AppDelegate.swift`
 
 - [ ] **Step 1: Update `NotificationDelegate.didReceive`**
 
-In `Sources/CanopyCompanion/AppDelegate.swift`, replace the entire `NotificationDelegate` class with:
+In `Sources/Pager/AppDelegate.swift`, replace the entire `NotificationDelegate` class with:
 
 ```swift
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
@@ -1160,7 +1160,7 @@ Leave the rest of `AppDelegate.swift` unchanged.
 
 ```bash
 xcodegen generate
-xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 ```
 Expected: succeeds.
@@ -1168,7 +1168,7 @@ Expected: succeeds.
 - [ ] **Step 3: Stage changes**
 
 ```bash
-git add Sources/CanopyCompanion/AppDelegate.swift
+git add Sources/Pager/AppDelegate.swift
 git status
 ```
 Pause for approval.
@@ -1197,35 +1197,35 @@ Expected: deploy succeeds.
 Find the running app's PID and confirm before killing:
 ```bash
 xcrun devicectl device process list --device "00008150-001C65CC1E40401C" \
-  | grep -i CanopyCompanion
+  | grep -i Pager
 ```
 If the app is running, terminate it via the device (or just let `devicectl install` handle the replacement; usually safer to close it by hand on the device).
 
 - [ ] **Step 4: Install to device**
 
 ```bash
-APP_PATH=$(xcodebuild -project CanopyCompanion.xcodeproj -scheme CanopyCompanion \
+APP_PATH=$(xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -showBuildSettings 2>/dev/null \
-  | awk '/ BUILT_PRODUCTS_DIR = /{print $3}' | head -n1)/CanopyCompanion.app
+  | awk '/ BUILT_PRODUCTS_DIR = /{print $3}' | head -n1)/Pager.app
 xcrun devicectl device install app --device "00008150-001C65CC1E40401C" "$APP_PATH"
 ```
 Expected: install succeeds. If the path is empty, re-run the build from Task 9.
 
 - [ ] **Step 5: Verify test notification → history entry**
 
-1. Open Canopy Companion on device S.
+1. Open Pager on device S.
 2. Tap **Send Test Notification**.
 3. Lock the device; verify the notification appears.
 4. Unlock, open the app, go to `History → View Notification History`.
-5. Expected: one entry with title "Canopy Companion", body starts with "テスト通知".
+5. Expected: one entry with title "Pager", body starts with "テスト通知".
 
 - [ ] **Step 6: Verify `/request` with long `toolInput` stores full body**
 
 From your dev machine:
 ```bash
 LONG=$(python3 -c 'print("line " + "\n".join(["X" * 80 for _ in range(20)]))')
-curl -s -X POST "$CANOPY_COMPANION_WORKER_URL/request" \
-  -H "Authorization: Bearer $CANOPY_COMPANION_SECRET" \
+curl -s -X POST "$PAGER_WORKER_URL/request" \
+  -H "Authorization: Bearer $PAGER_SECRET" \
   -H "Content-Type: application/json" \
   -d "$(python3 -c "import json,os; print(json.dumps({'requestId':'test-long','toolName':'Bash','project':'demo','toolInput':os.environ['LONG']}))")"
 ```
@@ -1248,8 +1248,8 @@ On device:
 
 ```bash
 LONG_MSG=$(python3 -c 'print("Hook message: " + "X" * 500)')
-curl -s -X POST "$CANOPY_COMPANION_WORKER_URL/notify" \
-  -H "Authorization: Bearer $CANOPY_COMPANION_SECRET" \
+curl -s -X POST "$PAGER_WORKER_URL/notify" \
+  -H "Authorization: Bearer $PAGER_SECRET" \
   -H "Content-Type: application/json" \
   -d "$(python3 -c "import json,os; print(json.dumps({'title':'Stop hook','message':os.environ['LONG_MSG']}))")"
 ```
@@ -1285,7 +1285,7 @@ Do NOT proceed without an explicit yes.
 git status
 git diff --cached
 ```
-Expected: staged changes include all the Worker/iOS changes from Tasks 1–10 but nothing from `build/` or `CanopyCompanion.xcodeproj/`.
+Expected: staged changes include all the Worker/iOS changes from Tasks 1–10 but nothing from `build/` or `Pager.xcodeproj/`.
 
 - [ ] **Step 3: Commit**
 
@@ -1293,7 +1293,7 @@ Expected: staged changes include all the Worker/iOS changes from Tasks 1–10 bu
 git commit -m "$(cat <<'EOF'
 Add notification history with Service Extension
 
-- New CanopyNotificationService target captures every push into the
+- New PagerNotificationService target captures every push into the
   App Group container before the OS displays it, so truncated alerts
   can be read in full later.
 - HistoryStore persists per-entry JSON files keyed by timestamp+id,
@@ -1323,7 +1323,7 @@ git push origin main
 ## Notes for the implementer
 
 - **Do not commit or deploy without approval.** Every task ends with `git add` only. Confirm with the user before running `git commit`, `wrangler deploy`, or `devicectl install`.
-- **`xcodegen generate` rewrites `CanopyCompanion.xcodeproj/`.** This is expected. Do not stage or commit it; it is regenerated from `project.yml`.
+- **`xcodegen generate` rewrites `Pager.xcodeproj/`.** This is expected. Do not stage or commit it; it is regenerated from `project.yml`.
 - **Signing issues on first build of the NSE** usually mean the App Group isn't assigned in the Developer Portal. Fix that before changing any code.
-- **If `INFOPLIST_KEY_NSExtension` as a stringified dict fails at runtime**, create `Sources/CanopyNotificationService/Info.plist` with the standard NSExtension structure and point to it via `settings.base.INFOPLIST_FILE`. Only fall back to this if needed; it's more verbose.
+- **If `INFOPLIST_KEY_NSExtension` as a stringified dict fails at runtime**, create `Sources/PagerNotificationService/Info.plist` with the standard NSExtension structure and point to it via `settings.base.INFOPLIST_FILE`. Only fall back to this if needed; it's more verbose.
 - **The `id` ↔ filename relationship** in `HistoryStore.delete(id:)` uses a substring match on `-\(id).json`. `id` values come from `requestId` (UUIDs from Claude Code or the worker's `crypto.randomUUID()`) or from `UUID().uuidString`, both of which are unique enough that substring matching is safe.

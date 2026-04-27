@@ -11,7 +11,7 @@ import Foundation
 /// `pruneOldFiles` may race with either writer in rare cases; deletions are
 /// best-effort and tolerate already-removed files.
 enum HistoryStore {
-    static let appGroupID = "group.sh.saqoo.CanopyCompanion"
+    static let appGroupID = "group.sh.saqoo.Pager"
     static let maxItems = 100
 
     enum StoreError: Error {

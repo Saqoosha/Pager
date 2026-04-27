@@ -1,22 +1,23 @@
-# Canopy Companion
+# Pager
 
-iOS app for managing Claude Code permission requests from your iPhone and Apple Watch.
+iOS app for managing AI coding agent permission requests and "done" notifications from your iPhone and Apple Watch. Supports **Claude Code**, **Codex CLI**, and **Cursor**.
 
-Receive push notifications when Claude Code needs permission to run a tool, and approve or deny directly from the lock screen or Watch — no need to switch to the terminal.
+Receive push notifications when your agent needs permission to run a tool, and approve or deny directly from the lock screen or Watch — no need to switch to the terminal.
 
 ## Features
 
 - **Lock screen actions**: Allow / Deny / Always Allow buttons on notifications
 - **Apple Watch support**: Action buttons mirrored automatically via iOS notification system
 - **Plain notifications**: Receive "task done" and "waiting for input" alerts
+- **Per-CLI sender avatars**: Slack-style "from Claude Code / Codex / Cursor" header on the lock screen
 - **Cloudflare Worker relay**: APNs push via lightweight edge worker with KV state
 
 ## Architecture
 
 ```
-Claude Code hooks  ──→  Cloudflare Worker  ──→  APNs  ──→  iPhone/Watch
-                              ↕ KV
-                   hook polls for decision  ←──  user taps action button
+CLI hooks  ──→  Cloudflare Worker  ──→  APNs  ──→  iPhone/Watch
+                      ↕ KV
+           hook polls for decision  ←──  user taps action button
 ```
 
 See [docs/architecture.md](docs/architecture.md) for details.
@@ -47,25 +48,25 @@ wrangler deploy
 
 ```bash
 xcodegen generate
-open CanopyCompanion.xcodeproj
+open Pager.xcodeproj
 ```
 
 Build and run on a physical device (push notifications require a real device).
 
 ### 3. Configure the App
 
-1. Open Canopy Companion on your iPhone
+1. Open Pager on your iPhone
 2. Enter the Worker URL and shared secret
 3. Tap "Register Device"
 4. Send a test notification to verify
 
-### 4. Configure Claude Code Hooks
+### 4. Configure Hooks
 
-Set environment variables in your shell profile or Claude Code settings:
+Set environment variables in your shell profile or CLI settings:
 
 ```bash
-export CANOPY_COMPANION_WORKER_URL="https://your-worker.workers.dev"
-export CANOPY_COMPANION_SECRET="your-shared-secret"
+export PAGER_WORKER_URL="https://your-worker.workers.dev"
+export PAGER_SECRET="your-shared-secret"
 ```
 
 Add hooks in `~/.claude/settings.json`:
@@ -73,7 +74,7 @@ Add hooks in `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "PermissionRequest": [
+    "PreToolUse": [
       {
         "matcher": "",
         "hooks": [{ "type": "command", "command": "/path/to/hooks/permission-request.sh" }]
@@ -95,11 +96,13 @@ Add hooks in `~/.claude/settings.json`:
 }
 ```
 
+For Codex / Cursor wiring, see [docs/multi-cli-setup.md](docs/multi-cli-setup.md).
+
 ## Project Structure
 
 ```
-Sources/CanopyCompanion/
-  CanopyCompanionApp.swift    # App entry point
+Sources/Pager/
+  PagerApp.swift              # App entry point
   AppDelegate.swift           # APNs registration, notification categories & delegate
   ContentView.swift           # Settings UI (worker URL, secret, register, test)
   NetworkService.swift        # HTTP client for worker communication
@@ -107,11 +110,11 @@ worker/
   src/index.ts                # Cloudflare Worker (APNs JWT, request lifecycle)
   wrangler.toml               # Worker configuration
 hooks/
-  permission-request.sh       # Claude Code PreToolUse hook (per-project)
-  notify-notification.sh      # Claude Code Notification hook (user-global)
-  notify-stop.sh              # Claude Code Stop hook (user-global)
+  permission-request.sh       # PreToolUse hook (per-project, decides tool permissions)
+  notify-notification.sh      # Notification hook (user-global)
+  notify-stop.sh              # Stop hook (Claude / Codex / Cursor, --source)
 ```
 
 ## Bundle ID
 
-`sh.saqoo.CanopyCompanion`
+`sh.saqoo.Pager`

@@ -1,4 +1,4 @@
-name: CanopyCompanion
+name: Pager
 options:
   bundleIdPrefix: sh.saqoo
   deploymentTarget:
@@ -10,44 +10,44 @@ settings:
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: 1
 targets:
-  CanopyCompanion:
+  Pager:
     type: application
     platform: iOS
     sources:
-      - Sources/CanopyCompanion
+      - Sources/Pager
       - Sources/Shared
       # Avatars are also bundled with the extension; main app needs the same
       # PNGs to render per-source icons in the History list.
-      - path: Sources/CanopyNotificationService/Avatars
+      - path: Sources/PagerNotificationService/Avatars
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager
         SWIFT_STRICT_CONCURRENCY: complete
-        INFOPLIST_FILE: Sources/CanopyCompanion/Info.plist
+        INFOPLIST_FILE: Sources/Pager/Info.plist
     entitlements:
-      path: Sources/CanopyCompanion/CanopyCompanion.entitlements
+      path: Sources/Pager/Pager.entitlements
       properties:
         aps-environment: development
         com.apple.developer.usernotifications.communication: true
         com.apple.security.application-groups:
-          - group.sh.saqoo.CanopyCompanion
+          - group.sh.saqoo.Pager
     dependencies:
-      - target: CanopyNotificationService
+      - target: PagerNotificationService
 
-  CanopyNotificationService:
+  PagerNotificationService:
     type: app-extension
     platform: iOS
     sources:
-      - Sources/CanopyNotificationService
+      - Sources/PagerNotificationService
       - Sources/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion.NotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager.NotificationService
         SWIFT_STRICT_CONCURRENCY: complete
-        INFOPLIST_FILE: Sources/CanopyNotificationService/Info.plist
+        INFOPLIST_FILE: Sources/PagerNotificationService/Info.plist
     entitlements:
-      path: Sources/CanopyNotificationService/NotificationService.entitlements
+      path: Sources/PagerNotificationService/NotificationService.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.sh.saqoo.CanopyCompanion
+          - group.sh.saqoo.Pager

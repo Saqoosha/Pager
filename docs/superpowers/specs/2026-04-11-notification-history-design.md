@@ -5,7 +5,7 @@ Status: Approved for planning
 
 ## Problem
 
-Canopy Companion notifications frequently contain long text (tool inputs, hook messages) that get truncated in the iOS notification alert. Users cannot read the full content:
+Pager notifications frequently contain long text (tool inputs, hook messages) that get truncated in the iOS notification alert. Users cannot read the full content:
 
 1. The permission-request push body is truncated to 200 characters by the Worker.
 2. The `/notify` endpoint can send long messages, but only what fits in the alert banner is visible.
@@ -48,8 +48,8 @@ Users want to open the app and read the full content of past notifications, incl
 
 **Components:**
 
-- **CanopyNotificationService** — new NSE target. Runs before every push is shown, captures the full payload into shared storage.
-- **App Group** `group.sh.saqoo.CanopyCompanion` — shared container between the extension and the main app.
+- **PagerNotificationService** — new NSE target. Runs before every push is shown, captures the full payload into shared storage.
+- **App Group** `group.sh.saqoo.Pager` — shared container between the extension and the main app.
 - **Shared/HistoryStore** — compiled into both targets. Handles JSON read/write in the App Group container.
 - **Main app additions** — `HistoryListView`, `HistoryDetailView`, `AppState` for deep-link navigation, tap handling in `NotificationDelegate`.
 
@@ -125,8 +125,8 @@ Existing app builds (no NSE) silently ignore the new keys and `mutable-content`.
 
 ```
 Sources/
-├── CanopyCompanion/             # existing main app
-├── CanopyNotificationService/   # new NSE target
+├── Pager/             # existing main app
+├── PagerNotificationService/   # new NSE target
 │   ├── NotificationService.swift
 │   └── NotificationService.entitlements
 └── Shared/                      # new, compiled into both targets
@@ -139,37 +139,37 @@ Both targets include `Sources/Shared` in their `sources` list in `project.yml`.
 ### `project.yml` — new target
 
 ```yaml
-  CanopyNotificationService:
+  PagerNotificationService:
     type: app-extension
     platform: iOS
     sources:
-      - Sources/CanopyNotificationService
+      - Sources/PagerNotificationService
       - Sources/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.CanopyCompanion.NotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager.NotificationService
         SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: true
     entitlements:
-      path: Sources/CanopyNotificationService/NotificationService.entitlements
+      path: Sources/PagerNotificationService/NotificationService.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.sh.saqoo.CanopyCompanion
+          - group.sh.saqoo.Pager
 ```
 
-Main app target: add `Sources/Shared` to `sources`, add the App Group entitlement to `CanopyCompanion.entitlements`, and declare that the extension is embedded in the app.
+Main app target: add `Sources/Shared` to `sources`, add the App Group entitlement to `Pager.entitlements`, and declare that the extension is embedded in the app.
 
 ### Provisioning
 
-1. Create App Group `group.sh.saqoo.CanopyCompanion` in Apple Developer Portal.
-2. Assign the group to both bundle IDs (`sh.saqoo.CanopyCompanion` and `sh.saqoo.CanopyCompanion.NotificationService`).
+1. Create App Group `group.sh.saqoo.Pager` in Apple Developer Portal.
+2. Assign the group to both bundle IDs (`sh.saqoo.Pager` and `sh.saqoo.Pager.NotificationService`).
 3. Regenerate provisioning profiles. `xcodebuild -allowProvisioningUpdates` should handle this automatically; fall back to manual if needed.
 
 ## `HistoryStore` API
 
 ```swift
 enum HistoryStore {
-    static let appGroupID = "group.sh.saqoo.CanopyCompanion"
+    static let appGroupID = "group.sh.saqoo.Pager"
     static let maxItems = 100
 
     static func containerURL() -> URL?

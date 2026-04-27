@@ -9,7 +9,7 @@ Communication Notifications API.
 
 - `notify-stop.sh` reachable from each CLI — the canonical path used in the
   examples is `~/.claude/hooks/notify-stop.sh` (symlinked from this repo).
-- `CANOPY_COMPANION_WORKER_URL` and `CANOPY_COMPANION_SECRET` exported in the
+- `PAGER_WORKER_URL` and `PAGER_SECRET` exported in the
   shell that the CLI launches (`~/.zshenv`, `~/.config/fish/config.fish`, etc).
 - iOS app installed via Xcode with the *Communication Notifications* capability
   enabled on the App ID — see "One-time Xcode setup" below.
@@ -21,8 +21,8 @@ Communication Notifications API.
 on the command line cannot enable it automatically. Do this once:
 
 1. `xcodegen generate`
-2. Open `CanopyCompanion.xcodeproj` in Xcode.
-3. Select the **CanopyCompanion** target → *Signing & Capabilities* →
+2. Open `Pager.xcodeproj` in Xcode.
+3. Select the **Pager** target → *Signing & Capabilities* →
    `+ Capability` → **Communication Notifications**.
    *(Only the main app target. The Service Extension does not have a
    Communication Notifications capability — the entitlement on the host app
@@ -130,13 +130,13 @@ yields nothing the body falls back to the status verb
 ## Logs
 
 Per-CLI hook activity is appended to
-`~/Library/Logs/CanopyCompanion/notify-stop.log` (override with
-`CANOPY_COMPANION_LOG_DIR`). One line per Stop event:
+`~/Library/Logs/Pager/notify-stop.log` (override with
+`PAGER_LOG_DIR`). One line per Stop event:
 
 ```
 2026-04-27T06:55:31Z [claude] OK title=[myproj] Done msg=Refactored auth flow
 2026-04-27T06:55:32Z [codex]  ERR curl exit=6 http=000 body= title=[myproj] Done msg=Pushed PR
-2026-04-27T06:55:32Z [cursor] SKIP env CANOPY_COMPANION_WORKER_URL or _SECRET unset (project=myproj)
+2026-04-27T06:55:32Z [cursor] SKIP env PAGER_WORKER_URL or _SECRET unset (project=myproj)
 ```
 
 Useful when investigating "why didn't I get a notification" after the fact —
@@ -147,14 +147,14 @@ Other layers worth knowing about:
 
 | Layer | Where to look |
 |---|---|
-| Hook (this script) | `~/Library/Logs/CanopyCompanion/notify-stop.log` |
+| Hook (this script) | `~/Library/Logs/Pager/notify-stop.log` |
 | Worker | `wrangler tail` (live) or Cloudflare dashboard → Workers Logs |
-| iOS Notification Service Extension | Mac Console.app → select device → filter `CanopyNotificationService` |
+| iOS Notification Service Extension | Mac Console.app → select device → filter `PagerNotificationService` |
 | iOS app (per-notification history) | Tap any notification → opens the app's History view |
 
 ## Avatar assets
 
-`Sources/CanopyNotificationService/Avatars/` holds 256×256 PNGs extracted from
+`Sources/PagerNotificationService/Avatars/` holds 256×256 PNGs extracted from
 the locally installed Mac apps. Rebuild them after an upstream icon redesign:
 
 ```bash

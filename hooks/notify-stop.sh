@@ -16,7 +16,7 @@ done
 # Persistent log so failures from Codex/Cursor (whose stderr handling varies)
 # can be diagnosed after the fact. Claude Code already captures stderr in its
 # own hook log, so this is mostly a belt-and-braces for the other two.
-LOG_DIR="${CANOPY_COMPANION_LOG_DIR:-$HOME/Library/Logs/CanopyCompanion}"
+LOG_DIR="${PAGER_LOG_DIR:-$HOME/Library/Logs/Pager}"
 mkdir -p "$LOG_DIR" 2>/dev/null
 LOG_FILE="$LOG_DIR/notify-stop.log"
 log() {
@@ -157,12 +157,12 @@ case "$SOURCE" in
     ;;
 esac
 
-WORKER_URL="${CANOPY_COMPANION_WORKER_URL}"
-SECRET="${CANOPY_COMPANION_SECRET}"
+WORKER_URL="${PAGER_WORKER_URL}"
+SECRET="${PAGER_SECRET}"
 
 if [ -z "$WORKER_URL" ] || [ -z "$SECRET" ]; then
-  echo "notify-stop: CANOPY_COMPANION_WORKER_URL or _SECRET not set; skipping" >&2
-  log "SKIP env CANOPY_COMPANION_WORKER_URL or _SECRET unset (project=${PROJECT:-?})"
+  echo "notify-stop: PAGER_WORKER_URL or _SECRET not set; skipping" >&2
+  log "SKIP env PAGER_WORKER_URL or _SECRET unset (project=${PROJECT:-?})"
   exit 0
 fi
 

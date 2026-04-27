@@ -13,7 +13,7 @@
 
 ## Components
 
-### iOS App (`Sources/CanopyCompanion/`)
+### iOS App (`Sources/Pager/`)
 
 Minimal SwiftUI app with four responsibilities:
 
@@ -25,7 +25,7 @@ Minimal SwiftUI app with four responsibilities:
 #### Class Diagram
 
 ```
-CanopyCompanionApp (@main)
+PagerApp (@main)
   └── AppDelegate (UIApplicationDelegate)
         ├── registers UNNotificationCategory
         ├── registers for remote notifications
@@ -75,7 +75,7 @@ Stateless relay between Claude Code hooks and APNs, with KV for request state.
 
 ### Claude Code Hooks
 
-#### `permission-request.sh` (PermissionRequest hook)
+#### `permission-request.sh` (PreToolUse hook)
 
 ```
 1. Generate UUID for request
@@ -93,7 +93,7 @@ Simple POST to `/notify` with title and message. Strips markdown formatting from
 ## Data Flow: Permission Request
 
 ```
-1. Claude Code triggers PermissionRequest hook
+1. Claude Code triggers PreToolUse hook
 2. permission-request.sh generates UUID, POSTs to /request
 3. Worker stores PendingRequest in KV (TTL 5min)
 4. Worker sends APNs push with category "PERMISSION_REQUEST"
