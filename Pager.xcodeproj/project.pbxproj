@@ -1,0 +1,519 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		09CB9467283463BE44477E86 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F91CBC6D8DC513D14DD622B /* KeychainHelper.swift */; };
+		1342F5DB532E92347C33F12C /* NotificationHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 342508A1024D319E392CE3C7 /* NotificationHistoryItem.swift */; };
+		16B1521C2CAB925CB07E9FED /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B79FB7A2B476F9518E01015 /* HistoryView.swift */; };
+		2B93B538840908CCF454E978 /* claude.png in Resources */ = {isa = PBXBuildFile; fileRef = BCEDA1C2485B264E59376260 /* claude.png */; };
+		353ED80DC939B651F3C1EDAC /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005343063FBC582C4A058D89 /* NotificationService.swift */; };
+		39BDD5CE4E6F174DEABEF21D /* PagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970868E8483864B89311370E /* PagerApp.swift */; };
+		4278DE23E0BDE7388D4CD734 /* NotificationHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 342508A1024D319E392CE3C7 /* NotificationHistoryItem.swift */; };
+		4E2C1E5DC1DC5BD2FEB28CD1 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEFE54D56A8C8E87D243B0B5 /* NetworkService.swift */; };
+		5716A5EE55A9025073CBB3D5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A09C3E9C2A033C1BAF452E2 /* Assets.xcassets */; };
+		611B98C3C24E7BD9E72785FD /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49EECA2DA461D7983ACBC13A /* HistoryStore.swift */; };
+		8C3FE5D2B769579A56575179 /* cursor.png in Resources */ = {isa = PBXBuildFile; fileRef = 431ABCEF41949C9F31694067 /* cursor.png */; };
+		968CB4D37CA25830F13E3044 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB0685E1D1C93FF83870299 /* AppDelegate.swift */; };
+		9885EEFFCF286FC756A786FE /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9430750D3E98EB3FC6086864 /* AppState.swift */; };
+		98D2F4002A324109C6115EB2 /* codex.png in Resources */ = {isa = PBXBuildFile; fileRef = 3AE4C03C9128BDCCBD88620E /* codex.png */; };
+		DE8E57360D48856590DC3B2F /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49EECA2DA461D7983ACBC13A /* HistoryStore.swift */; };
+		E3E0743A798B735256721A0D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD74461D0AF321BC1772CD8D /* ContentView.swift */; };
+		E76551C1B967DA654C71E976 /* claude.png in Resources */ = {isa = PBXBuildFile; fileRef = BCEDA1C2485B264E59376260 /* claude.png */; };
+		EE3E8949DF2E700301DA335F /* cursor.png in Resources */ = {isa = PBXBuildFile; fileRef = 431ABCEF41949C9F31694067 /* cursor.png */; };
+		F092D3BB284E4DF4F6CCC733 /* PagerNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7636FAF495AD728251877BD9 /* PagerNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FB1C9D69D95FF90CF808300A /* codex.png in Resources */ = {isa = PBXBuildFile; fileRef = 3AE4C03C9128BDCCBD88620E /* codex.png */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA2C09735C57E4944384617B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B105C5306482049441977B0A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9FC17D7227B7EC4B9BDF4D43;
+			remoteInfo = PagerNotificationService;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6B9C719C814A9B928E76EA1E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F092D3BB284E4DF4F6CCC733 /* PagerNotificationService.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		005343063FBC582C4A058D89 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		0B79FB7A2B476F9518E01015 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		1A09C3E9C2A033C1BAF452E2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1CA1E51E13496D3093709EBA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		342508A1024D319E392CE3C7 /* NotificationHistoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationHistoryItem.swift; sourceTree = "<group>"; };
+		3AE4C03C9128BDCCBD88620E /* codex.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = codex.png; sourceTree = "<group>"; };
+		431ABCEF41949C9F31694067 /* cursor.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = cursor.png; sourceTree = "<group>"; };
+		49EECA2DA461D7983ACBC13A /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
+		4F91CBC6D8DC513D14DD622B /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		7636FAF495AD728251877BD9 /* PagerNotificationService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PagerNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		9430750D3E98EB3FC6086864 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		970868E8483864B89311370E /* PagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagerApp.swift; sourceTree = "<group>"; };
+		9FB0685E1D1C93FF83870299 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		BCEDA1C2485B264E59376260 /* claude.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = claude.png; sourceTree = "<group>"; };
+		BEFE54D56A8C8E87D243B0B5 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		C68354525DAAF82B22BDBA2D /* Pager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Pager.entitlements; sourceTree = "<group>"; };
+		EA6551922E635FB22E15AE1E /* Pager.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Pager.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EBCBD9895110250B9657D410 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FB99C7BC1B8CCD611314D8FE /* NotificationService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationService.entitlements; sourceTree = "<group>"; };
+		FD74461D0AF321BC1772CD8D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0D49E7601823E1540ECC3A1D /* PagerNotificationService */ = {
+			isa = PBXGroup;
+			children = (
+				1CA1E51E13496D3093709EBA /* Info.plist */,
+				FB99C7BC1B8CCD611314D8FE /* NotificationService.entitlements */,
+				005343063FBC582C4A058D89 /* NotificationService.swift */,
+				A7FD0810BCEF4CCE751F2777 /* Avatars */,
+			);
+			name = PagerNotificationService;
+			path = Sources/PagerNotificationService;
+			sourceTree = "<group>";
+		};
+		4463CA12B8AA9CE44EB0D195 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				49EECA2DA461D7983ACBC13A /* HistoryStore.swift */,
+				342508A1024D319E392CE3C7 /* NotificationHistoryItem.swift */,
+			);
+			name = Shared;
+			path = Sources/Shared;
+			sourceTree = "<group>";
+		};
+		56571CA6709FD5839561A045 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EA6551922E635FB22E15AE1E /* Pager.app */,
+				7636FAF495AD728251877BD9 /* PagerNotificationService.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		94183E5B0FB7A3544C3AFE11 /* Pager */ = {
+			isa = PBXGroup;
+			children = (
+				9FB0685E1D1C93FF83870299 /* AppDelegate.swift */,
+				9430750D3E98EB3FC6086864 /* AppState.swift */,
+				1A09C3E9C2A033C1BAF452E2 /* Assets.xcassets */,
+				FD74461D0AF321BC1772CD8D /* ContentView.swift */,
+				0B79FB7A2B476F9518E01015 /* HistoryView.swift */,
+				EBCBD9895110250B9657D410 /* Info.plist */,
+				4F91CBC6D8DC513D14DD622B /* KeychainHelper.swift */,
+				BEFE54D56A8C8E87D243B0B5 /* NetworkService.swift */,
+				C68354525DAAF82B22BDBA2D /* Pager.entitlements */,
+				970868E8483864B89311370E /* PagerApp.swift */,
+			);
+			name = Pager;
+			path = Sources/Pager;
+			sourceTree = "<group>";
+		};
+		A7FD0810BCEF4CCE751F2777 /* Avatars */ = {
+			isa = PBXGroup;
+			children = (
+				BCEDA1C2485B264E59376260 /* claude.png */,
+				3AE4C03C9128BDCCBD88620E /* codex.png */,
+				431ABCEF41949C9F31694067 /* cursor.png */,
+			);
+			name = Avatars;
+			path = Sources/PagerNotificationService/Avatars;
+			sourceTree = "<group>";
+		};
+		ED6301D49F0A86250F50A730 = {
+			isa = PBXGroup;
+			children = (
+				A7FD0810BCEF4CCE751F2777 /* Avatars */,
+				94183E5B0FB7A3544C3AFE11 /* Pager */,
+				0D49E7601823E1540ECC3A1D /* PagerNotificationService */,
+				4463CA12B8AA9CE44EB0D195 /* Shared */,
+				56571CA6709FD5839561A045 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		886824445F3DE4B6196088D9 /* Pager */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E98E8DB1D171389F396071D2 /* Build configuration list for PBXNativeTarget "Pager" */;
+			buildPhases = (
+				F86A0503C56408014CCE19E6 /* Sources */,
+				F46BC7CDABA9C93A41DFA3C3 /* Resources */,
+				6B9C719C814A9B928E76EA1E /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B14D6B9E401F3C8CCC63D70F /* PBXTargetDependency */,
+			);
+			name = Pager;
+			packageProductDependencies = (
+			);
+			productName = Pager;
+			productReference = EA6551922E635FB22E15AE1E /* Pager.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9FC17D7227B7EC4B9BDF4D43 /* PagerNotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 02CB0656E03EB033AD798594 /* Build configuration list for PBXNativeTarget "PagerNotificationService" */;
+			buildPhases = (
+				770BB19C2A2517D3D4BD172D /* Sources */,
+				DA8B2521C45EA5AD24F1E728 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PagerNotificationService;
+			packageProductDependencies = (
+			);
+			productName = PagerNotificationService;
+			productReference = 7636FAF495AD728251877BD9 /* PagerNotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B105C5306482049441977B0A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					886824445F3DE4B6196088D9 = {
+						DevelopmentTeam = G5G54TCH8W;
+					};
+					9FC17D7227B7EC4B9BDF4D43 = {
+						DevelopmentTeam = G5G54TCH8W;
+					};
+				};
+			};
+			buildConfigurationList = EA2FEC67A8E0F7C5CEAD2173 /* Build configuration list for PBXProject "Pager" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = ED6301D49F0A86250F50A730;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 56571CA6709FD5839561A045 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				886824445F3DE4B6196088D9 /* Pager */,
+				9FC17D7227B7EC4B9BDF4D43 /* PagerNotificationService */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DA8B2521C45EA5AD24F1E728 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E76551C1B967DA654C71E976 /* claude.png in Resources */,
+				98D2F4002A324109C6115EB2 /* codex.png in Resources */,
+				EE3E8949DF2E700301DA335F /* cursor.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F46BC7CDABA9C93A41DFA3C3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5716A5EE55A9025073CBB3D5 /* Assets.xcassets in Resources */,
+				2B93B538840908CCF454E978 /* claude.png in Resources */,
+				FB1C9D69D95FF90CF808300A /* codex.png in Resources */,
+				8C3FE5D2B769579A56575179 /* cursor.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		770BB19C2A2517D3D4BD172D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE8E57360D48856590DC3B2F /* HistoryStore.swift in Sources */,
+				4278DE23E0BDE7388D4CD734 /* NotificationHistoryItem.swift in Sources */,
+				353ED80DC939B651F3C1EDAC /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F86A0503C56408014CCE19E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				968CB4D37CA25830F13E3044 /* AppDelegate.swift in Sources */,
+				9885EEFFCF286FC756A786FE /* AppState.swift in Sources */,
+				E3E0743A798B735256721A0D /* ContentView.swift in Sources */,
+				611B98C3C24E7BD9E72785FD /* HistoryStore.swift in Sources */,
+				16B1521C2CAB925CB07E9FED /* HistoryView.swift in Sources */,
+				09CB9467283463BE44477E86 /* KeychainHelper.swift in Sources */,
+				4E2C1E5DC1DC5BD2FEB28CD1 /* NetworkService.swift in Sources */,
+				1342F5DB532E92347C33F12C /* NotificationHistoryItem.swift in Sources */,
+				39BDD5CE4E6F174DEABEF21D /* PagerApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B14D6B9E401F3C8CCC63D70F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9FC17D7227B7EC4B9BDF4D43 /* PagerNotificationService */;
+			targetProxy = AA2C09735C57E4944384617B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		20E43C1D66BA2CB292CB6F1D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = G5G54TCH8W;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		2457D3FA93C1E9B6A005A546 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/Pager/Pager.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/Pager/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		29C270FA13DF9064C49407C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Sources/PagerNotificationService/NotificationService.entitlements;
+				INFOPLIST_FILE = Sources/PagerNotificationService/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager.NotificationService;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B6995C0A23545BB0E4647620 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/Pager/Pager.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/Pager/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C81088434925BAAA2713D048 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Sources/PagerNotificationService/NotificationService.entitlements;
+				INFOPLIST_FILE = Sources/PagerNotificationService/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager.NotificationService;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E7538297F337DABEB71EC401 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = G5G54TCH8W;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		02CB0656E03EB033AD798594 /* Build configuration list for PBXNativeTarget "PagerNotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				29C270FA13DF9064C49407C8 /* Debug */,
+				C81088434925BAAA2713D048 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E98E8DB1D171389F396071D2 /* Build configuration list for PBXNativeTarget "Pager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2457D3FA93C1E9B6A005A546 /* Debug */,
+				B6995C0A23545BB0E4647620 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EA2FEC67A8E0F7C5CEAD2173 /* Build configuration list for PBXProject "Pager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				20E43C1D66BA2CB292CB6F1D /* Debug */,
+				E7538297F337DABEB71EC401 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B105C5306482049441977B0A /* Project object */;
+}

@@ -21,8 +21,8 @@ case "$TYPE" in
     ;;
 esac
 
-WORKER_URL="${CANOPY_COMPANION_WORKER_URL}"
-SECRET="${CANOPY_COMPANION_SECRET}"
+WORKER_URL="${PAGER_WORKER_URL}"
+SECRET="${PAGER_SECRET}"
 
 curl -s --max-time 5 -X POST "$WORKER_URL/notify" \
   -H "Content-Type: application/json" \

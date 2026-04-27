@@ -38,11 +38,11 @@ final class NotificationService: UNNotificationServiceExtension {
             try HistoryStore.append(item)
         } catch {
             // Non-fatal: continue delivering the notification even if write fails.
-            NSLog("CanopyNotificationService: HistoryStore.append failed: \(error)")
+            NSLog("PagerNotificationService: HistoryStore.append failed: \(error)")
         }
 
         guard let best = bestAttempt else {
-            NSLog("CanopyNotificationService: mutableCopy failed — delivering original content")
+            NSLog("PagerNotificationService: mutableCopy failed — delivering original content")
             contentHandler(request.content)
             self.contentHandler = nil
             return
@@ -68,7 +68,7 @@ final class NotificationService: UNNotificationServiceExtension {
             // Worker-allowlisted source values that the extension doesn't yet
             // know — log so producer/consumer drift is observable instead of
             // silently impersonating Claude.
-            NSLog("CanopyNotificationService: unknown source \"\(rawSource)\" — delivering plain notification")
+            NSLog("PagerNotificationService: unknown source \"\(rawSource)\" — delivering plain notification")
             contentHandler(best)
         }
         self.contentHandler = nil
@@ -88,12 +88,12 @@ final class NotificationService: UNNotificationServiceExtension {
         source: NotificationSource
     ) -> UNNotificationContent? {
         guard let imageData = avatarImageData(for: source) else {
-            NSLog("CanopyNotificationService: avatar asset unreadable: \(source.assetName)")
+            NSLog("PagerNotificationService: avatar asset unreadable: \(source.assetName)")
             return nil
         }
 
         let image = INImage(imageData: imageData)
-        let handle = INPersonHandle(value: "\(source.assetName)@canopy-companion", type: .unknown)
+        let handle = INPersonHandle(value: "\(source.assetName)@pager", type: .unknown)
         let sender = INPerson(
             personHandle: handle,
             nameComponents: nil,
@@ -109,7 +109,7 @@ final class NotificationService: UNNotificationServiceExtension {
             content: content.body,
             speakableGroupName: nil,
             conversationIdentifier: source.assetName,
-            serviceName: "Canopy Companion",
+            serviceName: "Pager",
             sender: sender,
             attachments: nil
         )
@@ -122,14 +122,14 @@ final class NotificationService: UNNotificationServiceExtension {
         // visible avatar comes from updating(from:) below, not from this.
         interaction.donate { error in
             if let error {
-                NSLog("CanopyNotificationService: INInteraction.donate failed: \(error)")
+                NSLog("PagerNotificationService: INInteraction.donate failed: \(error)")
             }
         }
 
         do {
             return try content.updating(from: intent)
         } catch {
-            NSLog("CanopyNotificationService: updating(from:) failed: \(error)")
+            NSLog("PagerNotificationService: updating(from:) failed: \(error)")
             return nil
         }
     }
@@ -139,7 +139,7 @@ final class NotificationService: UNNotificationServiceExtension {
         source: NotificationSource
     ) {
         guard let bundleURL = avatarBundleURL(for: source) else {
-            NSLog("CanopyNotificationService: attachment fallback asset missing: \(source.assetName)")
+            NSLog("PagerNotificationService: attachment fallback asset missing: \(source.assetName)")
             return
         }
         // UNNotificationAttachment moves the file out of our sandbox, so the
@@ -151,7 +151,7 @@ final class NotificationService: UNNotificationServiceExtension {
         do {
             try FileManager.default.copyItem(at: bundleURL, to: tmpURL)
         } catch {
-            NSLog("CanopyNotificationService: attachment copy failed: \(error)")
+            NSLog("PagerNotificationService: attachment copy failed: \(error)")
             return
         }
         do {
@@ -159,7 +159,7 @@ final class NotificationService: UNNotificationServiceExtension {
             content.attachments = [attachment]
         } catch {
             try? FileManager.default.removeItem(at: tmpURL)
-            NSLog("CanopyNotificationService: attachment init failed: \(error)")
+            NSLog("PagerNotificationService: attachment init failed: \(error)")
         }
     }
 
@@ -171,13 +171,13 @@ final class NotificationService: UNNotificationServiceExtension {
 
     private func avatarImageData(for source: NotificationSource) -> Data? {
         guard let url = avatarBundleURL(for: source) else {
-            NSLog("CanopyNotificationService: avatar URL missing: \(source.assetName)")
+            NSLog("PagerNotificationService: avatar URL missing: \(source.assetName)")
             return nil
         }
         do {
             return try Data(contentsOf: url)
         } catch {
-            NSLog("CanopyNotificationService: avatar read failed for \(source.assetName) at \(url): \(error)")
+            NSLog("PagerNotificationService: avatar read failed for \(source.assetName) at \(url): \(error)")
             return nil
         }
     }
