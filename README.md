@@ -39,13 +39,37 @@ See [docs/architecture.md](docs/architecture.md) for details.
 ```bash
 cd worker
 bun install
-# Set secrets
-wrangler secret put SHARED_SECRET
-wrangler secret put APNS_PRIVATE_KEY  # paste .p8 key content
+
+# Copy the example config and fill in your own values
+cp wrangler.example.toml wrangler.toml
+# Then edit wrangler.toml:
+#   - account_id            → your Cloudflare account id
+#   - APNS_KEY_ID           → your APNs Auth Key id (the part after AuthKey_ in the .p8 filename)
+#   - APNS_TEAM_ID          → your Apple Developer Team id
+#   - APNS_BUNDLE_ID        → your iOS app bundle id (default sh.saqoo.Pager — change if you fork)
+#   - APNS_USE_SANDBOX      → "true" for development APNs, "false" for production
+
+# Create the KV namespace and copy its id into wrangler.toml ([[kv_namespaces]].id)
+wrangler kv namespace create REQUESTS
+
+# Set secrets (these are NEVER committed)
+wrangler secret put SHARED_SECRET           # any random string; the iOS app uses the same value
+wrangler secret put APNS_PRIVATE_KEY        # paste the contents of your AuthKey_<KEY_ID>.p8 file
+
 wrangler deploy
 ```
 
+`worker/wrangler.toml` is gitignored — only `wrangler.example.toml` is checked in.
+
 ### 2. Build the iOS App
+
+If you're forking, edit `project.yml` first:
+
+- `DEVELOPMENT_TEAM` → your Apple Developer Team id
+- `bundleIdPrefix` and the `PRODUCT_BUNDLE_IDENTIFIER` entries → a prefix you own (replacing `sh.saqoo`)
+- `com.apple.security.application-groups` → match your new bundle id (e.g. `group.<your-prefix>.Pager`)
+
+Then:
 
 ```bash
 xcodegen generate
@@ -142,4 +166,9 @@ scripts/
 
 ## Bundle ID
 
-`sh.saqoo.Pager` (extension: `sh.saqoo.Pager.NotificationService`)
+Default: `sh.saqoo.Pager` (extension: `sh.saqoo.Pager.NotificationService`).
+Forks should change the prefix in `project.yml` to a domain they own.
+
+## License
+
+[MIT](LICENSE)
