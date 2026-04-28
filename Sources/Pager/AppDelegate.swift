@@ -151,17 +151,21 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
             return
         }
 
-        let decidedAt = Date()
+        // Apple expects a prompt completionHandler call. Hold a background
+        // task assertion so iOS keeps us alive long enough to POST the
+        // decision after we've signalled "done" to the notification system.
+        let app = UIApplication.shared
+        let bgState = BackgroundDecisionState()
         Task { @MainActor in
-            let app = UIApplication.shared
-            var bgTaskId: UIBackgroundTaskIdentifier = .invalid
-            bgTaskId = app.beginBackgroundTask(withName: "PagerSendDecision") {
-                if bgTaskId != .invalid {
-                    app.endBackgroundTask(bgTaskId)
-                    bgTaskId = .invalid
-                }
+            bgState.bgTaskId = app.beginBackgroundTask(withName: "PagerSendDecision") {
+                NSLog("Pager: PagerSendDecision bgTask expired")
+                bgState.endIfActive(app: app)
             }
+        }
+        completionHandler()
 
+        let decidedAt = Date()
+        Task {
             await NetworkService.shared.sendDecision(requestId: requestId, decision: decision)
             do {
                 try HistoryStore.updateDecision(
@@ -170,13 +174,9 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
                     decidedAt: decidedAt
                 )
             } catch {
-                NSLog("HistoryStore.updateDecision failed: \(error)")
+                NSLog("Pager: HistoryStore.updateDecision failed: %@", "\(error)")
             }
-            completionHandler()
-            if bgTaskId != .invalid {
-                app.endBackgroundTask(bgTaskId)
-                bgTaskId = .invalid
-            }
+            await MainActor.run { bgState.endIfActive(app: app) }
         }
     }
 
@@ -191,4 +191,20 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
 
 extension Notification.Name {
     static let deviceTokenReceived = Notification.Name("deviceTokenReceived")
+}
+
+// MARK: - Background Task State
+
+/// Holds the bgTaskId so the expiration handler and the work Task share the
+/// same identifier safely. Using a reference type avoids capturing a `var`
+/// across `@Sendable` boundaries.
+@MainActor
+private final class BackgroundDecisionState {
+    var bgTaskId: UIBackgroundTaskIdentifier = .invalid
+
+    func endIfActive(app: UIApplication) {
+        guard bgTaskId != .invalid else { return }
+        app.endBackgroundTask(bgTaskId)
+        bgTaskId = .invalid
+    }
 }

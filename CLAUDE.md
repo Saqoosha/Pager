@@ -45,7 +45,7 @@ cd worker && wrangler deploy
 ## Hooks
 
 Three hook scripts in `hooks/` directory:
-- `permission-request.sh` — sends permission request to worker, polls for decision (120s timeout). Wired per-project via `.claude/settings.json` `PreToolUse` hook
+- `permission-request.sh` — sends permission request to worker, polls for decision (120s timeout). Wired (per-project or globally) via `settings.json` `PermissionRequest` hook. Returns `{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"|"deny",...}}}` so Claude Code honors the watch decision instead of falling through to the inline prompt
 - `notify-notification.sh` — user-global Claude Code `Notification` hook. Title is `[<project>] Permission Needed / Waiting / Notification`
 - `notify-stop.sh` — Stop hook for **Claude Code, Codex, and Cursor**. Accepts `--source <claude|codex|cursor>` (defaults to `claude`). Claude/Codex extract the body from `last_assistant_message` with a transcript fallback (Claude `.jsonl` shape — Codex transcripts won't match, so an empty `last_assistant_message` falls through to `"Done"`). Cursor uses `workspace_roots[]` + `status` for the title verb, and pulls the body from its JSONL transcript using the Anthropic Messages shape (`role:"assistant", message.content[].text`). Falls back to the status verb when the transcript yields nothing. PPID-walking guard suppresses the duplicate Claude notification when Cursor invokes Claude's hook directly via `~/.claude/settings.json`.
 
