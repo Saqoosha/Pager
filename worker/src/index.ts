@@ -160,6 +160,7 @@ export default {
           toolName: string;
           toolInput: string;
           project: string;
+          source?: string;
         }>(request);
 
         if (!body?.requestId || !body.toolName) return badRequest("requestId and toolName required");
@@ -168,6 +169,10 @@ export default {
         if (!/^[A-Za-z0-9_-]{1,128}$/.test(body.requestId)) {
           return badRequest("invalid requestId format");
         }
+        if (body.source !== undefined && !VALID_SOURCES.includes(body.source as Source)) {
+          return badRequest(`invalid source: must be one of ${VALID_SOURCES.join(", ")}`);
+        }
+        const source = (body.source as Source | undefined) ?? "claude";
 
         const deviceToken = await env.REQUESTS.get("device_token");
         if (!deviceToken) {
@@ -210,6 +215,7 @@ export default {
           toolName,
           toolInputFull,
           project,
+          source,
         };
 
         const pushResult = await sendPush(env, deviceToken, apnsPayload);

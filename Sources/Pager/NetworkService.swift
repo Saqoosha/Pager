@@ -61,30 +61,39 @@ final class NetworkService: ObservableObject {
     }
 
     nonisolated func sendDecision(requestId: String, decision: String) async {
-        let workerUrl = await MainActor.run { self.workerUrl }
-        let secret = await MainActor.run { self.sharedSecret }
-        guard !workerUrl.isEmpty else { return }
-
-        guard let url = URL(string: "\(workerUrl)/response") else { return }
+        let (workerUrl, secret) = await MainActor.run { (self.workerUrl, self.sharedSecret) }
+        guard !workerUrl.isEmpty, let url = URL(string: "\(workerUrl)/response") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
+        // Worst-case latency budget under iOS's bgTask window (~30s).
+        request.timeoutInterval = 10
 
         let body: [String: String] = ["requestId": requestId, "decision": decision]
         request.httpBody = try? JSONEncoder().encode(body)
 
-        // Retry once on failure
         for attempt in 1...2 {
             do {
-                let (_, response) = try await URLSession.shared.data(for: request)
-                if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+                if code == 200 { return }
+                let bodyStr = String(data: data, encoding: .utf8) ?? ""
+                NSLog("Pager: sendDecision attempt %d HTTP %d body=%@", attempt, code, bodyStr)
+                // 4xx won't recover by retrying — surface and stop.
+                if (400..<500).contains(code) {
+                    await MainActor.run {
+                        NetworkService.shared.lastError = "Decision send failed (HTTP \(code)): \(bodyStr)"
+                    }
                     return
                 }
             } catch {
+                NSLog("Pager: sendDecision attempt %d error: %@", attempt, "\(error)")
                 if attempt == 2 {
-                    print("Decision send failed after retry: \(error)")
+                    await MainActor.run {
+                        NetworkService.shared.lastError = "Decision send failed: \(error.localizedDescription)"
+                    }
                 }
             }
         }

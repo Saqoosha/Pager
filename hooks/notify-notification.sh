@@ -9,10 +9,13 @@ if [ "$PROJECT" = "observer-sessions" ]; then
   exit 0
 fi
 
+# permission-request.sh already sends a richer notification (with Allow / Deny
+# action buttons) for permission prompts — skip the duplicate here.
+if [ "$TYPE" = "permission_prompt" ]; then
+  exit 0
+fi
+
 case "$TYPE" in
-  permission_prompt)
-    TITLE="[$PROJECT] Permission Needed"
-    ;;
   idle_prompt)
     TITLE="[$PROJECT] Waiting"
     ;;
