@@ -4,18 +4,29 @@ import Security
 enum KeychainHelper {
     private static let service = "sh.saqoo.Pager"
 
-    static func save(key: String, value: String) {
-        guard let data = value.data(using: .utf8) else { return }
+    @discardableResult
+    static func save(key: String, value: String) -> OSStatus {
+        guard let data = value.data(using: .utf8) else {
+            NSLog("KeychainHelper.save: utf8 encoding failed for key=%@", key)
+            return errSecParam
+        }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
         ]
-        SecItemDelete(query as CFDictionary)
+        let delStatus = SecItemDelete(query as CFDictionary)
+        if delStatus != errSecSuccess && delStatus != errSecItemNotFound {
+            NSLog("KeychainHelper.save: SecItemDelete status=%d key=%@", delStatus, key)
+        }
         var addQuery = query
         addQuery[kSecValueData as String] = data
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addQuery as CFDictionary, nil)
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        if addStatus != errSecSuccess {
+            NSLog("KeychainHelper.save: SecItemAdd failed status=%d key=%@", addStatus, key)
+        }
+        return addStatus
     }
 
     static func load(key: String) -> String? {

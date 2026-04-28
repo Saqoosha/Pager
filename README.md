@@ -74,7 +74,7 @@ Add hooks in `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "PreToolUse": [
+    "PermissionRequest": [
       {
         "matcher": "",
         "hooks": [{ "type": "command", "command": "/path/to/hooks/permission-request.sh" }]
@@ -110,7 +110,7 @@ worker/
   src/index.ts                # Cloudflare Worker (APNs JWT, request lifecycle)
   wrangler.toml               # Worker configuration
 hooks/
-  permission-request.sh       # PreToolUse hook (per-project, decides tool permissions)
+  permission-request.sh       # PermissionRequest hook (decides tool permissions via Apple Watch)
   notify-notification.sh      # Notification hook (user-global)
   notify-stop.sh              # Stop hook (Claude / Codex / Cursor, --source)
 ```

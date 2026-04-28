@@ -16,6 +16,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Re-save the shared secret so it picks up kSecAttrAccessibleAfterFirstUnlock.
+        // Items first stored without that attribute are inaccessible while the
+        // device is locked, which silently 401s the watch-decision POST.
+        if let secret = KeychainHelper.load(key: "sharedSecret"), !secret.isEmpty {
+            KeychainHelper.save(key: "sharedSecret", value: secret)
+        }
         registerNotificationCategory()
         requestNotificationPermission()
         application.registerForRemoteNotifications()
@@ -25,10 +31,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     // MARK: - Notification Category
 
     private func registerNotificationCategory() {
+        // No .authenticationRequired — that option queues actions until the
+        // iPhone is unlocked, which means an Apple Watch tap on a locked
+        // iPhone never reaches the delegate.
         let allow = UNNotificationAction(
             identifier: NotificationAction.allow,
             title: "Allow",
-            options: [.authenticationRequired]
+            options: []
         )
         let deny = UNNotificationAction(
             identifier: NotificationAction.deny,
@@ -38,7 +47,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         let allowAlways = UNNotificationAction(
             identifier: NotificationAction.allowAlways,
             title: "Always Allow",
-            options: [.authenticationRequired]
+            options: []
         )
 
         let category = UNNotificationCategory(
@@ -142,15 +151,22 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
             return
         }
 
-        // Apple requires prompt return from this delegate; async work runs
-        // after the handler returns and logs its own failures.
+        // Apple expects a prompt completionHandler call. Hold a background
+        // task assertion so iOS keeps us alive long enough to POST the
+        // decision after we've signalled "done" to the notification system.
+        let app = UIApplication.shared
+        let bgState = BackgroundDecisionState()
+        Task { @MainActor in
+            bgState.bgTaskId = app.beginBackgroundTask(withName: "PagerSendDecision") {
+                NSLog("Pager: PagerSendDecision bgTask expired")
+                bgState.endIfActive(app: app)
+            }
+        }
         completionHandler()
 
         let decidedAt = Date()
         Task {
             await NetworkService.shared.sendDecision(requestId: requestId, decision: decision)
-        }
-        Task {
             do {
                 try HistoryStore.updateDecision(
                     requestId: requestId,
@@ -158,8 +174,9 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
                     decidedAt: decidedAt
                 )
             } catch {
-                NSLog("HistoryStore.updateDecision failed: \(error)")
+                NSLog("Pager: HistoryStore.updateDecision failed: %@", "\(error)")
             }
+            await MainActor.run { bgState.endIfActive(app: app) }
         }
     }
 
@@ -174,4 +191,20 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
 
 extension Notification.Name {
     static let deviceTokenReceived = Notification.Name("deviceTokenReceived")
+}
+
+// MARK: - Background Task State
+
+/// Holds the bgTaskId so the expiration handler and the work Task share the
+/// same identifier safely. Using a reference type avoids capturing a `var`
+/// across `@Sendable` boundaries.
+@MainActor
+private final class BackgroundDecisionState {
+    var bgTaskId: UIBackgroundTaskIdentifier = .invalid
+
+    func endIfActive(app: UIApplication) {
+        guard bgTaskId != .invalid else { return }
+        app.endBackgroundTask(bgTaskId)
+        bgTaskId = .invalid
+    }
 }
