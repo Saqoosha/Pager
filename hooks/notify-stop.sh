@@ -76,7 +76,7 @@ clean_text() {
     | tr '\n' ' ' \
     | sed -E 's/ +/ /g' \
     | sed 's/^ //;s/ $//' \
-    | cut -c1-200
+    | jq -Rrs '.[:200]'
 }
 
 # Filter values that mean "the model produced no real assistant text" — these
