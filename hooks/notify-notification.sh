@@ -30,4 +30,4 @@ SECRET="${PAGER_SECRET}"
 curl -s --max-time 5 -X POST "$WORKER_URL/notify" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SECRET" \
-  -d "$(jq -n --arg t "$TITLE" --arg m "$MSG" '{title: $t, message: $m}')"
+  -d "$(jq -n --arg t "$TITLE" --arg m "$MSG" '{title: $t, message: $m, source: "claude"}')"
