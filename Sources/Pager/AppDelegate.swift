@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        HistoryUpdateBridge.startBridge()
         return true
     }
 

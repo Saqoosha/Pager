@@ -54,6 +54,9 @@ struct HistoryListView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: HistoryUpdateBridge.didUpdate)) { _ in
+            reload()
+        }
     }
 
     private func reload() {
