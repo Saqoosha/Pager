@@ -90,6 +90,7 @@ enum HistoryStore {
         } catch {
             NSLog("HistoryStore: pruneOldFiles failed: \(error)")
         }
+        HistoryUpdateBridge.postDarwinUpdate()
     }
 
     /// Loads all history entries, newest first.
@@ -161,6 +162,7 @@ enum HistoryStore {
         item.decidedAt = decidedAt
         let newData = try encoder().encode(item)
         try newData.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        HistoryUpdateBridge.postDarwinUpdate()
     }
 
     private static func pruneOldFiles(in dir: URL) throws {
