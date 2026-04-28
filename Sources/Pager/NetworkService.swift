@@ -63,9 +63,7 @@ final class NetworkService: ObservableObject {
     nonisolated func sendDecision(requestId: String, decision: String) async {
         let workerUrl = await MainActor.run { self.workerUrl }
         let secret = await MainActor.run { self.sharedSecret }
-        guard !workerUrl.isEmpty else { return }
-
-        guard let url = URL(string: "\(workerUrl)/response") else { return }
+        guard !workerUrl.isEmpty, let url = URL(string: "\(workerUrl)/response") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -75,7 +73,6 @@ final class NetworkService: ObservableObject {
         let body: [String: String] = ["requestId": requestId, "decision": decision]
         request.httpBody = try? JSONEncoder().encode(body)
 
-        // Retry once on failure
         for attempt in 1...2 {
             do {
                 let (_, response) = try await URLSession.shared.data(for: request)
@@ -84,7 +81,7 @@ final class NetworkService: ObservableObject {
                 }
             } catch {
                 if attempt == 2 {
-                    print("Decision send failed after retry: \(error)")
+                    NSLog("Pager: sendDecision failed after retry: %@", "\(error)")
                 }
             }
         }

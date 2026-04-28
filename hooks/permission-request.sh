@@ -1,15 +1,40 @@
 #!/bin/bash
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
-TOOL_INPUT=$(echo "$INPUT" | jq -r '.tool_input | tostring' | head -c 500)
 PROJECT=$(echo "$INPUT" | jq -r '.cwd // "" | split("/") | last')
 REQUEST_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# Tool-specific human-readable preview. Falls back to compact JSON for unknown
+# tools so we never lose information, just trim it.
+TOOL_INPUT=$(echo "$INPUT" | jq -r --arg t "$TOOL_NAME" '
+  .tool_input as $i |
+  if   $t == "Bash"        then ($i.command // "")
+  elif $t == "Read"        then ($i.file_path // "")
+  elif $t == "Write"       then ($i.file_path // "")
+  elif $t == "Edit"        then ($i.file_path // "")
+  elif $t == "NotebookEdit" then ($i.notebook_path // "")
+  elif $t == "Glob"        then (($i.pattern // "") + (if $i.path then "  in " + $i.path else "" end))
+  elif $t == "Grep"        then (($i.pattern // "") + (if $i.path then "  in " + $i.path else "" end))
+  elif $t == "WebFetch"    then ($i.url // "")
+  elif $t == "WebSearch"   then ($i.query // "")
+  elif $t == "Task"        then (($i.description // "") + (if $i.subagent_type then "  (" + $i.subagent_type + ")" else "" end))
+  elif $t == "TodoWrite"   then (($i.todos // []) | map("• " + .content) | join("\n"))
+  elif $t == "ExitPlanMode" then ($i.plan // "")
+  else ($i | tostring)
+  end
+' | head -c 800)
 
 WORKER_URL="${PAGER_WORKER_URL}"
 SECRET="${PAGER_SECRET}"
 TIMEOUT=120
 
+LOG="${PAGER_LOG_DIR:-$HOME/Library/Logs/Pager}/permission-request.log"
+mkdir -p "$(dirname "$LOG")" 2>/dev/null
+log() { printf '%s [%s] %s\n' "$(date -u +%FT%TZ)" "$REQUEST_ID" "$*" >> "$LOG"; }
+log "fired tool=$TOOL_NAME project=$PROJECT worker_set=$([ -n "$WORKER_URL" ] && echo y || echo n)"
+
 if [ -z "$WORKER_URL" ] || [ -z "$SECRET" ]; then
+  log "SKIP env unset"
   echo "WARNING: PAGER_WORKER_URL or PAGER_SECRET not set. Falling back to interactive prompt." >&2
   exit 0
 fi
@@ -24,9 +49,11 @@ SEND_RESULT=$(curl -s --max-time 10 -X POST "$WORKER_URL/request" \
 # Check if send succeeded
 if ! echo "$SEND_RESULT" | jq -e '.ok' > /dev/null 2>&1; then
   ERROR_DETAIL=$(echo "$SEND_RESULT" | jq -r '.error // "unknown error"' 2>/dev/null || echo "request failed")
+  log "SEND failed: $ERROR_DETAIL"
   echo "WARNING: Pager request failed: $ERROR_DETAIL. Falling back to interactive prompt." >&2
   exit 0
 fi
+log "SEND ok, polling..."
 
 # Poll for response
 ELAPSED=0
@@ -47,20 +74,16 @@ while [ $ELAPSED -lt $TIMEOUT ]; do
 
     if [ "$STATUS" = "decided" ]; then
       DECISION=$(echo "$RESULT" | jq -r '.decision // empty')
+      log "DECIDED $DECISION (after ${ELAPSED}s)"
       case "$DECISION" in
-        allow)
+        allow|allowAlways)
           cat <<'EOF'
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}
-EOF
-          ;;
-        allowAlways)
-          cat <<'EOF'
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allowAlways"}}
+{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
 EOF
           ;;
         deny)
           cat <<'EOF'
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Denied via Pager"}}
+{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"Denied via Pager"}}}
 EOF
           ;;
       esac
@@ -73,5 +96,6 @@ EOF
 done
 
 # Timeout — fall through to normal permission prompt
+log "TIMEOUT after ${TIMEOUT}s"
 echo "WARNING: Pager timed out after ${TIMEOUT}s waiting for decision. Falling back to interactive prompt." >&2
 exit 0
