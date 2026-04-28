@@ -21,6 +21,15 @@ TOOL_INPUT=$(echo "$INPUT" | jq -r --arg t "$TOOL_NAME" '
     elif $t == "Task"        then (($i.description // "") + (if $i.subagent_type then "  (" + $i.subagent_type + ")" else "" end))
     elif $t == "TodoWrite"   then (($i.todos // []) | map("• " + (.content // "")) | join("\n"))
     elif $t == "ExitPlanMode" then ($i.plan // "")
+    elif $t == "AskUserQuestion" then
+      (($i.questions // [])
+       | to_entries
+       | map(
+           ((.value.header // ("Q" + ((.key + 1) | tostring))) + ": " + (.value.question // ""))
+           + "\n"
+           + (((.value.options // []) | map("• " + (.label // "")) | join("\n")))
+         )
+       | join("\n\n"))
     else ($i | tostring)
     end
   ) | if length > 800 then .[:800] + "…" else . end
