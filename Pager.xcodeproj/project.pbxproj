@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		09CB9467283463BE44477E86 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F91CBC6D8DC513D14DD622B /* KeychainHelper.swift */; };
+		0C55296CE587A8D89044A6BC /* HistoryUpdateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E04D8EEB559D005065B23D5 /* HistoryUpdateBridge.swift */; };
 		1342F5DB532E92347C33F12C /* NotificationHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 342508A1024D319E392CE3C7 /* NotificationHistoryItem.swift */; };
 		16B1521C2CAB925CB07E9FED /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B79FB7A2B476F9518E01015 /* HistoryView.swift */; };
 		2B93B538840908CCF454E978 /* claude.png in Resources */ = {isa = PBXBuildFile; fileRef = BCEDA1C2485B264E59376260 /* claude.png */; };
@@ -26,6 +27,7 @@
 		E76551C1B967DA654C71E976 /* claude.png in Resources */ = {isa = PBXBuildFile; fileRef = BCEDA1C2485B264E59376260 /* claude.png */; };
 		EE3E8949DF2E700301DA335F /* cursor.png in Resources */ = {isa = PBXBuildFile; fileRef = 431ABCEF41949C9F31694067 /* cursor.png */; };
 		F092D3BB284E4DF4F6CCC733 /* PagerNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7636FAF495AD728251877BD9 /* PagerNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F6E194E5CFB017CCEE0FC9D2 /* HistoryUpdateBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E04D8EEB559D005065B23D5 /* HistoryUpdateBridge.swift */; };
 		FB1C9D69D95FF90CF808300A /* codex.png in Resources */ = {isa = PBXBuildFile; fileRef = 3AE4C03C9128BDCCBD88620E /* codex.png */; };
 /* End PBXBuildFile section */
 
@@ -63,6 +65,7 @@
 		431ABCEF41949C9F31694067 /* cursor.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = cursor.png; sourceTree = "<group>"; };
 		49EECA2DA461D7983ACBC13A /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
 		4F91CBC6D8DC513D14DD622B /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		6E04D8EEB559D005065B23D5 /* HistoryUpdateBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryUpdateBridge.swift; sourceTree = "<group>"; };
 		7636FAF495AD728251877BD9 /* PagerNotificationService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PagerNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		9430750D3E98EB3FC6086864 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		970868E8483864B89311370E /* PagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagerApp.swift; sourceTree = "<group>"; };
@@ -93,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				49EECA2DA461D7983ACBC13A /* HistoryStore.swift */,
+				6E04D8EEB559D005065B23D5 /* HistoryUpdateBridge.swift */,
 				342508A1024D319E392CE3C7 /* NotificationHistoryItem.swift */,
 			);
 			name = Shared;
@@ -256,6 +260,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DE8E57360D48856590DC3B2F /* HistoryStore.swift in Sources */,
+				F6E194E5CFB017CCEE0FC9D2 /* HistoryUpdateBridge.swift in Sources */,
 				4278DE23E0BDE7388D4CD734 /* NotificationHistoryItem.swift in Sources */,
 				353ED80DC939B651F3C1EDAC /* NotificationService.swift in Sources */,
 			);
@@ -269,6 +274,7 @@
 				9885EEFFCF286FC756A786FE /* AppState.swift in Sources */,
 				E3E0743A798B735256721A0D /* ContentView.swift in Sources */,
 				611B98C3C24E7BD9E72785FD /* HistoryStore.swift in Sources */,
+				0C55296CE587A8D89044A6BC /* HistoryUpdateBridge.swift in Sources */,
 				16B1521C2CAB925CB07E9FED /* HistoryView.swift in Sources */,
 				09CB9467283463BE44477E86 /* KeychainHelper.swift in Sources */,
 				4E2C1E5DC1DC5BD2FEB28CD1 /* NetworkService.swift in Sources */,
