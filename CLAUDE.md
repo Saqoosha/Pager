@@ -84,6 +84,17 @@ This requires the `com.apple.developer.usernotifications.communication` entitlem
 - APNs key: `credentials/AuthKey_<your-apns-key-id>.p8` (do NOT commit)
 - Worker secrets: `SHARED_SECRET`, `APNS_PRIVATE_KEY` (set via `wrangler secret put`)
 - Worker plaintext vars (see `wrangler.toml`): `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`
+- Local-only files (gitignored): `worker/wrangler.toml` and `credentials/AuthKey_*.p8`. Only `worker/wrangler.example.toml` is committed.
+
+### Backup of real values (1Password — Personal vault)
+
+If the local files are lost, restore from 1Password:
+
+- `Pager — APNs Auth Key (QZA4KDCSKM)` — the `.p8` file (`op document get ... > credentials/AuthKey_<KEY_ID>.p8`)
+- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle ID, App Group
+- `Pager` — older entry, likely the `SHARED_SECRET`
+
+The actual `SHARED_SECRET` and `APNS_PRIVATE_KEY` values that the Worker uses live as Cloudflare Worker secrets and cannot be read back; re-set them with `wrangler secret put` if recovering on a new machine.
 
 ## Environment Variables
 
