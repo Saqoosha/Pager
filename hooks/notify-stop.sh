@@ -79,6 +79,44 @@ clean_text() {
     | jq -Rrs '.[:200]'
 }
 
+# Codex review subagents return their output as a JSON object (findings[],
+# overallcorrectness, overallexplanation) which arrives verbatim in
+# last_assistant_message. Render it as readable text before clean_text runs,
+# otherwise the lock-screen banner shows raw `{ "findings": [...]`.
+flatten_codex_json() {
+  local raw="$1"
+  case "$(printf '%s' "$raw" | sed -E 's/^[[:space:]]+//' | head -c 1)" in
+    '{'|'[') ;;
+    *) printf '%s' "$raw"; return ;;
+  esac
+  local rendered
+  rendered=$(printf '%s' "$raw" | jq -r '
+    def render_findings(fs):
+      (fs | length) as $n
+      | if $n == 0 then ""
+        else "\($n) finding\(if $n == 1 then "" else "s" end): "
+             + ([fs[] | (.title // .summary // "untitled")] | join("; "))
+        end;
+    if type == "object" then
+      if (.findings | type) == "array" then
+        (render_findings(.findings)) as $f
+        | if $f != "" then $f
+          elif (.overallexplanation // "") != "" then .overallexplanation
+          elif (.overallcorrectness // "") != "" then .overallcorrectness
+          else "" end
+      elif has("title") then
+        .title + (if (.body // "") != "" then ": " + .body else "" end)
+      elif has("summary") then .summary
+      else empty end
+    else empty end
+  ' 2>/dev/null)
+  if [ -n "$rendered" ]; then
+    printf '%s' "$rendered"
+  else
+    printf '%s' "$raw"
+  fi
+}
+
 # Filter values that mean "the model produced no real assistant text" — these
 # show up in both the Claude Code transcript and the Codex `last_assistant_message`
 # payload when the turn was a no-op (e.g. response-not-requested cases). Treating
@@ -135,6 +173,9 @@ case "$SOURCE" in
     LAST_FROM_PAYLOAD=$(echo "$INPUT" | jq -r '.last_assistant_message // ""')
     MSG=""
     if ! is_placeholder_message "$LAST_FROM_PAYLOAD"; then
+      if [ "$SOURCE" = "codex" ]; then
+        LAST_FROM_PAYLOAD=$(flatten_codex_json "$LAST_FROM_PAYLOAD")
+      fi
       MSG=$(printf '%s' "$LAST_FROM_PAYLOAD" | clean_text)
     elif [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
       # Stop can fire before the final turn's text lands on disk. A completed turn
