@@ -79,13 +79,19 @@ clean_text() {
     | jq -Rrs '.[:200]'
 }
 
-# Codex review subagents return their output as a JSON object (findings[],
-# overallcorrectness, overallexplanation) which arrives verbatim in
-# last_assistant_message. Render it as readable text before clean_text runs,
-# otherwise the lock-screen banner shows raw `{ "findings": [...]`.
+# Codex review subagents return their final result as a JSON object — most
+# commonly {findings[], overall_correctness, overall_explanation}, sometimes
+# {title, body} or {summary}. Without flattening, that JSON arrives verbatim
+# on the lock screen as `{ "findings": [...]`. Detect any leading `{` or `[`,
+# extract a readable summary, and fall back to the raw payload only when no
+# known field is populated. Currently invoked only for source=codex (see the
+# dispatch in the codex|claude case branch below).
 flatten_codex_json() {
   local raw="$1"
-  case "$(printf '%s' "$raw" | sed -E 's/^[[:space:]]+//' | head -c 1)" in
+  # Trim leading whitespace including newlines — `sed -E '^[[:space:]]+'` is
+  # line-oriented and silently misses payloads that start with "\n{...".
+  local stripped="${raw#"${raw%%[![:space:]]*}"}"
+  case "${stripped:0:1}" in
     '{'|'[') ;;
     *) printf '%s' "$raw"; return ;;
   esac
@@ -95,21 +101,26 @@ flatten_codex_json() {
       (fs | length) as $n
       | if $n == 0 then ""
         else "\($n) finding\(if $n == 1 then "" else "s" end): "
-             + ([fs[] | (.title // .summary // "untitled")] | join("; "))
+             + ([fs[]? | (.title // .summary // "untitled") | tostring] | join("; "))
         end;
     if type == "object" then
-      if (.findings | type) == "array" then
-        (render_findings(.findings)) as $f
-        | if $f != "" then $f
-          elif (.overallexplanation // "") != "" then .overallexplanation
-          elif (.overallcorrectness // "") != "" then .overallcorrectness
-          else "" end
-      elif has("title") then
-        .title + (if (.body // "") != "" then ": " + .body else "" end)
-      elif has("summary") then .summary
-      else empty end
-    else empty end
+      (if (.findings | type) == "array" then render_findings(.findings) else "" end) as $f
+      | ((.title // "") | tostring) as $t
+      | ((.summary // "") | tostring) as $s
+      | ((.body // "") | tostring) as $b
+      | ((.overall_explanation // .overallexplanation // "") | tostring) as $oe
+      | ((.overall_correctness // .overallcorrectness // "") | tostring) as $oc
+      | if $f != "" then $f
+        elif $t != "" then $t + (if $b != "" then ": " + $b else "" end)
+        elif $s != "" then $s
+        elif $oe != "" then $oe
+        elif $oc != "" then $oc
+        else "" end
+    elif type == "array" then render_findings(.)
+    else "" end
   ' 2>/dev/null)
+  # jq prints literal "null" when the filter resolves to null; treat as empty.
+  [ "$rendered" = "null" ] && rendered=""
   if [ -n "$rendered" ]; then
     printf '%s' "$rendered"
   else
