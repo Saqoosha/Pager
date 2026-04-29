@@ -96,6 +96,13 @@ the same fields the Claude Code branch consumes. The transcript fallback uses
 Claude's `.jsonl` shape, so if a Codex turn has an empty
 `last_assistant_message`, the body will fall through to `Done`.
 
+Codex review subagents return their final result as a JSON object — most
+commonly `{findings[], overall_correctness, overall_explanation}`, sometimes
+`{title, body}` or `{summary}`. `notify-stop.sh` runs `flatten_codex_json` on
+the Codex payload before the shared `clean_text` pass, so the lock-screen
+banner shows e.g. `2 findings: [P1] foo; [P2] bar` instead of raw
+`{ "findings": [...]`. Plain-text payloads pass through untouched.
+
 ## Cursor (IDE Agent only)
 
 Cursor 1.7+ exposes hooks for the in-IDE Agent / Composer chat. **The Cursor

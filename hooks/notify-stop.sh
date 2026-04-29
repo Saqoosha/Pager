@@ -79,6 +79,55 @@ clean_text() {
     | jq -Rrs '.[:200]'
 }
 
+# Codex review subagents return their final result as a JSON object — most
+# commonly {findings[], overall_correctness, overall_explanation}, sometimes
+# {title, body} or {summary}. Without flattening, that JSON arrives verbatim
+# on the lock screen as `{ "findings": [...]`. Detect any leading `{` or `[`,
+# extract a readable summary, and fall back to the raw payload only when no
+# known field is populated. Currently invoked only for source=codex (see the
+# dispatch in the codex|claude case branch below).
+flatten_codex_json() {
+  local raw="$1"
+  # Trim leading whitespace including newlines — `sed -E '^[[:space:]]+'` is
+  # line-oriented and silently misses payloads that start with "\n{...".
+  local stripped="${raw#"${raw%%[![:space:]]*}"}"
+  case "${stripped:0:1}" in
+    '{'|'[') ;;
+    *) printf '%s' "$raw"; return ;;
+  esac
+  local rendered
+  rendered=$(printf '%s' "$raw" | jq -r '
+    def render_findings(fs):
+      (fs | length) as $n
+      | if $n == 0 then ""
+        else "\($n) finding\(if $n == 1 then "" else "s" end): "
+             + ([fs[]? | (.title // .summary // "untitled") | tostring] | join("; "))
+        end;
+    if type == "object" then
+      (if (.findings | type) == "array" then render_findings(.findings) else "" end) as $f
+      | ((.title // "") | tostring) as $t
+      | ((.summary // "") | tostring) as $s
+      | ((.body // "") | tostring) as $b
+      | ((.overall_explanation // .overallexplanation // "") | tostring) as $oe
+      | ((.overall_correctness // .overallcorrectness // "") | tostring) as $oc
+      | if $f != "" then $f
+        elif $t != "" then $t + (if $b != "" then ": " + $b else "" end)
+        elif $s != "" then $s
+        elif $oe != "" then $oe
+        elif $oc != "" then $oc
+        else "" end
+    elif type == "array" then render_findings(.)
+    else "" end
+  ' 2>/dev/null)
+  # jq prints literal "null" when the filter resolves to null; treat as empty.
+  [ "$rendered" = "null" ] && rendered=""
+  if [ -n "$rendered" ]; then
+    printf '%s' "$rendered"
+  else
+    printf '%s' "$raw"
+  fi
+}
+
 # Filter values that mean "the model produced no real assistant text" — these
 # show up in both the Claude Code transcript and the Codex `last_assistant_message`
 # payload when the turn was a no-op (e.g. response-not-requested cases). Treating
@@ -135,6 +184,9 @@ case "$SOURCE" in
     LAST_FROM_PAYLOAD=$(echo "$INPUT" | jq -r '.last_assistant_message // ""')
     MSG=""
     if ! is_placeholder_message "$LAST_FROM_PAYLOAD"; then
+      if [ "$SOURCE" = "codex" ]; then
+        LAST_FROM_PAYLOAD=$(flatten_codex_json "$LAST_FROM_PAYLOAD")
+      fi
       MSG=$(printf '%s' "$LAST_FROM_PAYLOAD" | clean_text)
     elif [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
       # Stop can fire before the final turn's text lands on disk. A completed turn
