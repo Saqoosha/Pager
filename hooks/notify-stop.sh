@@ -22,7 +22,7 @@ LOG_FILE="$LOG_DIR/notify-stop.log"
 log() {
   # Subshell wrap so bash's redirect-open errors (e.g. no $HOME) don't leak to
   # the caller's stderr — logging is best-effort.
-  ( printf '%s [%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SOURCE" "$1" >> "$LOG_FILE" ) 2>/dev/null
+  ( printf '%s [%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SOURCE" "$*" >> "$LOG_FILE" ) 2>/dev/null
 }
 
 case "$SOURCE" in
@@ -45,7 +45,9 @@ esac
 # Either signal means "Cursor's own hook will already fire with --source cursor",
 # so suppress the nested Claude notification.
 running_under_cursor() {
-  [ -n "${CURSOR_PROJECT_DIR:-}" ] || [ -n "${CURSOR_VERSION:-}" ] || [ -n "${CURSOR_TRACE_ID:-}" ] && return 0
+  if [ -n "${CURSOR_PROJECT_DIR:-}" ] || [ -n "${CURSOR_VERSION:-}" ] || [ -n "${CURSOR_TRACE_ID:-}" ]; then
+    return 0
+  fi
   local pid=$PPID
   for _ in 1 2 3 4 5 6 7 8; do
     [ -z "$pid" ] || [ "$pid" -le 1 ] && return 1
@@ -209,9 +211,6 @@ case "$SOURCE" in
     ;;
 esac
 
-WORKER_URL="${PAGER_WORKER_URL}"
-SECRET="${PAGER_SECRET}"
-
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 if [ ! -f "$SCRIPT_DIR/pager-env.sh" ] && command -v realpath >/dev/null 2>&1; then
@@ -221,9 +220,9 @@ fi
 if [ -f "$SCRIPT_DIR/pager-env.sh" ]; then
   # shellcheck source=/dev/null
   . "$SCRIPT_DIR/pager-env.sh"
-  WORKER_URL="${PAGER_WORKER_URL}"
-  SECRET="${PAGER_SECRET}"
 fi
+WORKER_URL="${PAGER_WORKER_URL}"
+SECRET="${PAGER_SECRET}"
 
 if [ -z "$WORKER_URL" ] || [ -z "$SECRET" ]; then
   echo "notify-stop: PAGER_WORKER_URL or _SECRET not set; skipping" >&2

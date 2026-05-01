@@ -12,8 +12,9 @@ load_pager_env() {
 
   local login_item="${PAGER_1PASSWORD_LOGIN_ITEM:-ujd5nkrgzat5pa3jjqsyygm3ba}"
   if [ -z "${PAGER_WORKER_URL:-}" ]; then
-    PAGER_WORKER_URL=$(op item get "$login_item" --fields username 2>/dev/null)
-    export PAGER_WORKER_URL
+    local _url
+    _url=$(op item get "$login_item" --fields username 2>/dev/null)
+    [ -n "$_url" ] && { PAGER_WORKER_URL="$_url"; export PAGER_WORKER_URL; }
   fi
 
   if [ -n "${PAGER_WORKER_URL:-}" ] && [ -n "${PAGER_SECRET:-}" ]; then
@@ -21,8 +22,9 @@ load_pager_env() {
   fi
 
   if [ -z "${PAGER_SECRET:-}" ]; then
-    PAGER_SECRET=$(op item get "$login_item" --fields password --reveal 2>/dev/null)
-    export PAGER_SECRET
+    local _secret
+    _secret=$(op item get "$login_item" --fields password --reveal 2>/dev/null)
+    [ -n "$_secret" ] && { PAGER_SECRET="$_secret"; export PAGER_SECRET; }
   fi
 
   if [ -n "${PAGER_WORKER_URL:-}" ] && [ -n "${PAGER_SECRET:-}" ]; then
@@ -35,8 +37,9 @@ load_pager_env() {
     | jq -r '.fields[]? | select(.id == "notesPlain") | .value // ""' 2>/dev/null) || return 1
 
   if [ -z "${PAGER_WORKER_URL:-}" ]; then
-    PAGER_WORKER_URL=$(printf '%s\n' "$notes" | grep -Eo 'https://[^ )]*workers.dev[^ )]*' | head -n 1)
-    export PAGER_WORKER_URL
+    local _url
+    _url=$(printf '%s\n' "$notes" | grep -Eo 'https://[A-Za-z0-9./_-]*workers\.dev[A-Za-z0-9./_-]*' | head -n 1)
+    [ -n "$_url" ] && { PAGER_WORKER_URL="$_url"; export PAGER_WORKER_URL; }
   fi
 
   [ -n "${PAGER_WORKER_URL:-}" ] && [ -n "${PAGER_SECRET:-}" ]
