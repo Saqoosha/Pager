@@ -13,6 +13,9 @@ Communication Notifications API.
   shell that the CLI launches (`~/.zshenv`, `~/.config/fish/config.fish`, etc).
 - iOS app installed via Xcode with the *Communication Notifications* capability
   enabled on the App ID — see "One-time Xcode setup" below.
+- For a TestFlight-installed app, deploy the Worker with
+  `APNS_USE_SANDBOX = "false"` because TestFlight uses production APNs tokens.
+  Local Xcode development builds use the sandbox endpoint.
 
 ## One-time Xcode setup
 

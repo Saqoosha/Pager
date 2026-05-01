@@ -115,7 +115,10 @@ All non-OPTIONS routes require `Authorization: Bearer <SHARED_SECRET>`, compared
 - Key imported via Web Crypto `crypto.subtle.importKey("pkcs8", ...)`
 - Web Crypto's ECDSA sign returns raw `r||s` directly — no DER-to-raw conversion needed
 - JWT includes `kid` (key ID) and `iss` (team ID) claims
-- Supports sandbox and production endpoints via `APNS_USE_SANDBOX` env var
+- Supports sandbox and production endpoints via `APNS_USE_SANDBOX` env var.
+  Development builds installed from Xcode use sandbox APNs. TestFlight and App
+  Store builds are re-signed for production APNs, so the deployed Worker must
+  use `APNS_USE_SANDBOX = "false"` for TestFlight devices.
 
 #### KV Schema
 
@@ -191,6 +194,15 @@ POST to `/notify` with title, message, and `source`. Markdown formatting is stri
 - Internal errors are logged server-side but the public response is the opaque `{"error":"internal_error"}`
 
 > **Note**: Allow / Deny actions are **not** marked `authenticationRequired`. With that flag, taps on a locked iPhone (including ones forwarded from Apple Watch) get queued until the iPhone is unlocked and never reach the delegate. Trade-off: anyone holding the unlocked phone can tap Allow.
+
+## Export Compliance
+
+The app declares `ITSAppUsesNonExemptEncryption = false` in both the main app
+and Notification Service Extension Info.plists. The current implementation uses
+Apple-provided HTTPS via `URLSession` and Keychain storage only; there is no
+custom cryptography, VPN, secure messaging protocol, or other non-exempt
+encryption surface. Revisit this declaration if the app adds custom crypto or
+encryption-focused features.
 
 ## APNs Payloads
 
