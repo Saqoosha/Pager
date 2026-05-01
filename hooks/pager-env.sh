@@ -10,7 +10,7 @@ load_pager_env() {
   command -v op >/dev/null 2>&1 || return 1
   command -v jq >/dev/null 2>&1 || return 1
 
-  local _op_timeout="${PAGER_OP_TIMEOUT:-5}"
+  local _op_timeout="${PAGER_OP_TIMEOUT:-10}"
   _op_get() {
     if command -v timeout >/dev/null 2>&1; then
       timeout "${_op_timeout}s" op item get "$@"
