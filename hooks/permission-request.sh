@@ -37,7 +37,23 @@ TOOL_INPUT=$(echo "$INPUT" | jq -r --arg t "$TOOL_NAME" '
 
 WORKER_URL="${PAGER_WORKER_URL}"
 SECRET="${PAGER_SECRET}"
-TIMEOUT=120
+TIMEOUT="${PAGER_PERMISSION_TIMEOUT:-120}"
+case "$TIMEOUT" in
+  ''|*[!0-9]*) TIMEOUT=120 ;;
+esac
+
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+if [ ! -f "$SCRIPT_DIR/pager-env.sh" ] && command -v realpath >/dev/null 2>&1; then
+  SCRIPT_REALPATH="$(realpath "$SCRIPT_SOURCE" 2>/dev/null || printf '%s' "$SCRIPT_SOURCE")"
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_REALPATH")" && pwd)"
+fi
+if [ -f "$SCRIPT_DIR/pager-env.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$SCRIPT_DIR/pager-env.sh"
+  WORKER_URL="${PAGER_WORKER_URL}"
+  SECRET="${PAGER_SECRET}"
+fi
 
 LOG="${PAGER_LOG_DIR:-$HOME/Library/Logs/Pager}/permission-request.log"
 mkdir -p "$(dirname "$LOG")" 2>/dev/null

@@ -212,6 +212,19 @@ esac
 WORKER_URL="${PAGER_WORKER_URL}"
 SECRET="${PAGER_SECRET}"
 
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+if [ ! -f "$SCRIPT_DIR/pager-env.sh" ] && command -v realpath >/dev/null 2>&1; then
+  SCRIPT_REALPATH="$(realpath "$SCRIPT_SOURCE" 2>/dev/null || printf '%s' "$SCRIPT_SOURCE")"
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_REALPATH")" && pwd)"
+fi
+if [ -f "$SCRIPT_DIR/pager-env.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$SCRIPT_DIR/pager-env.sh"
+  WORKER_URL="${PAGER_WORKER_URL}"
+  SECRET="${PAGER_SECRET}"
+fi
+
 if [ -z "$WORKER_URL" ] || [ -z "$SECRET" ]; then
   echo "notify-stop: PAGER_WORKER_URL or _SECRET not set; skipping" >&2
   log "SKIP env PAGER_WORKER_URL or _SECRET unset (project=${PROJECT:-?})"

@@ -27,7 +27,43 @@ esac
 WORKER_URL="${PAGER_WORKER_URL}"
 SECRET="${PAGER_SECRET}"
 
-curl -s --max-time 5 -X POST "$WORKER_URL/notify" \
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+if [ ! -f "$SCRIPT_DIR/pager-env.sh" ] && command -v realpath >/dev/null 2>&1; then
+  SCRIPT_REALPATH="$(realpath "$SCRIPT_SOURCE" 2>/dev/null || printf '%s' "$SCRIPT_SOURCE")"
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_REALPATH")" && pwd)"
+fi
+if [ -f "$SCRIPT_DIR/pager-env.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$SCRIPT_DIR/pager-env.sh"
+  WORKER_URL="${PAGER_WORKER_URL}"
+  SECRET="${PAGER_SECRET}"
+fi
+
+LOG_DIR="${PAGER_LOG_DIR:-$HOME/Library/Logs/Pager}"
+mkdir -p "$LOG_DIR" 2>/dev/null
+LOG_FILE="$LOG_DIR/notify-notification.log"
+log() { ( printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" >> "$LOG_FILE" ) 2>/dev/null; }
+
+if [ -z "$WORKER_URL" ] || [ -z "$SECRET" ]; then
+  echo "notify-notification: PAGER_WORKER_URL or _SECRET not set; skipping" >&2
+  log "SKIP env PAGER_WORKER_URL or _SECRET unset (project=${PROJECT:-?} type=${TYPE:-?})"
+  exit 0
+fi
+
+HTTP_BODY=$(mktemp)
+trap 'rm -f "$HTTP_BODY"' EXIT
+HTTP_CODE=$(curl -sS --max-time 5 -o "$HTTP_BODY" -w '%{http_code}' \
+  -X POST "$WORKER_URL/notify" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SECRET" \
-  -d "$(jq -n --arg t "$TITLE" --arg m "$MSG" '{title: $t, message: $m, source: "claude"}')"
+  -d "$(jq -n --arg t "$TITLE" --arg m "$MSG" '{title: $t, message: $m, source: "claude"}')")
+CURL_EXIT=$?
+
+if [ $CURL_EXIT -ne 0 ] || [ "$HTTP_CODE" != "200" ]; then
+  body=$(cat "$HTTP_BODY" 2>/dev/null)
+  echo "notify-notification: curl exit=$CURL_EXIT http=$HTTP_CODE body=$body" >&2
+  log "ERR curl exit=$CURL_EXIT http=$HTTP_CODE body=$body title=$TITLE"
+else
+  log "OK title=$TITLE msg=$(printf %s "$MSG" | head -c 80)"
+fi
