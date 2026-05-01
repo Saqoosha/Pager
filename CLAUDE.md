@@ -39,6 +39,15 @@ xcodegen generate
 xcodebuild -project Pager.xcodeproj -scheme Pager \
   -destination "platform=iOS,name=S" -allowProvisioningUpdates build
 
+# Archive for App Store Connect/TestFlight
+BUILD_NUMBER=$(date +%Y%m%d%H%M)
+ARCHIVE_DIR="/tmp/pager-testflight-$BUILD_NUMBER"
+xcodebuild archive -project Pager.xcodeproj -scheme Pager \
+  -configuration Release -destination "generic/platform=iOS" \
+  -archivePath "$ARCHIVE_DIR/Pager.xcarchive" \
+  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+  -allowProvisioningUpdates
+
 # Install to device
 xcrun devicectl device install app --device "<your-iphone-udid>" "$APP_PATH"
 
@@ -56,8 +65,10 @@ cd worker && wrangler deploy
 - Action buttons (`ALLOW_ACTION`, `DENY_ACTION`, `ALLOW_ALWAYS_ACTION`) are **not** marked `authenticationRequired`. With that flag, taps on a locked iPhone (including ones forwarded from Apple Watch) get queued until unlock and never reach the delegate. Trade-off: anyone holding the unlocked phone could tap Allow
 - Shared secret is stored in Keychain (`KeychainHelper`, kSecAttrAccessibleAfterFirstUnlock). Items first stored without that attribute are inaccessible while the device is locked, which silently 401s the watch-decision POST — the AppDelegate re-saves the secret at launch to migrate legacy entries
 - `HistoryStore` writes one JSON file per notification into the App Group container. NSE writes on append; main app overwrites on `updateDecision`. They never target the same file at the same time. `HistoryUpdateBridge` posts a Darwin notification so the main app can refresh the SwiftUI list live when the NSE writes a new entry
-- APNs sandbox is controlled by `APNS_USE_SANDBOX` worker var. Must match the app's `aps-environment` entitlement (currently `development`)
+- APNs sandbox is controlled by `APNS_USE_SANDBOX` worker var. Local Xcode installs use the development APNs environment; App Store Connect/TestFlight exports are re-signed with production APNs and require `APNS_USE_SANDBOX = "false"` on the deployed Worker.
 - Worker stores pending requests in KV with 5-minute TTL; decided requests get 60-second TTL (let TTL expire rather than delete-on-read so the poller doesn't miss the decision if its HTTP response is lost)
+- TestFlight/App Store Connect uploads require the App Store Connect app record to exist first. The public ASC name is **Saqoosha Pager** because `Pager` is already taken globally; the installed app display name remains `Pager`.
+- Export compliance is declared in both Info.plists with `ITSAppUsesNonExemptEncryption = false`. This is valid for the current app because it only uses standard `URLSession` HTTPS and Keychain storage, with no custom cryptography.
 
 ## Hooks
 
@@ -78,6 +89,12 @@ The notification service extension donates an `INSendMessageIntent` per push so 
 3. `Sources/Pager/HistoryView.swift` (`SourceAvatar.assetName`)
 
 This requires the `com.apple.developer.usernotifications.communication` entitlement on the main app target only — the Service Extension does not need it (and Xcode does not expose the capability for extension targets). **No Apple approval form is needed** — it's a free capability — but `xcodebuild -allowProvisioningUpdates` cannot enable it via CLI alone. Open the project in Xcode once and add *Communication Notifications* capability to the **Pager** target via Signing & Capabilities; Xcode then registers it on the App ID and subsequent CLI builds succeed. If the entitlement is missing the extension still works — it falls back to a `UNNotificationAttachment` thumbnail.
+
+## TestFlight
+
+See [docs/testflight.md](docs/testflight.md) for the end-to-end distribution
+workflow, export options, and troubleshooting notes. The first successful upload
+used version `1.0.0`, build `202605011954`.
 
 ## Credentials
 

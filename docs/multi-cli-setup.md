@@ -9,10 +9,20 @@ Communication Notifications API.
 
 - `notify-stop.sh` reachable from each CLI — the canonical path used in the
   examples is `~/.claude/hooks/notify-stop.sh` (symlinked from this repo).
-- `PAGER_WORKER_URL` and `PAGER_SECRET` exported in the
-  shell that the CLI launches (`~/.zshenv`, `~/.config/fish/config.fish`, etc).
+- Credentials — choose one:
+  - **1Password (recommended):** store the Worker URL in the `username` field
+    and the shared secret in the `password` field of a login item named
+    `Pager`. The hooks source `pager-env.sh` automatically, which fetches
+    credentials at runtime via `op item get` (requires the 1Password CLI and
+    an unlocked vault). Override the item ID with `PAGER_1PASSWORD_LOGIN_ITEM`.
+  - **Environment variables:** export `PAGER_WORKER_URL` and `PAGER_SECRET`
+    in the shell the CLI launches (`~/.zshenv`, `~/.config/fish/config.fish`,
+    etc.). Environment variables take precedence over 1Password when set.
 - iOS app installed via Xcode with the *Communication Notifications* capability
   enabled on the App ID — see "One-time Xcode setup" below.
+- For a TestFlight-installed app, deploy the Worker with
+  `APNS_USE_SANDBOX = "false"` because TestFlight uses production APNs tokens.
+  Local Xcode development builds use the sandbox endpoint.
 
 ## One-time Xcode setup
 

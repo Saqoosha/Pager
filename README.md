@@ -27,7 +27,8 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 ### Prerequisites
 
-- Xcode 16+ with iOS 17.0 SDK
+- Xcode with Swift 6 and iOS 17.0+ device support for local development
+- Xcode with the iOS 26 SDK or newer for App Store Connect/TestFlight uploads
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 - Apple Developer account with APNs key
 - Cloudflare account
@@ -125,6 +126,25 @@ Add hooks in `~/.claude/settings.json`:
 ```
 
 For Codex / Cursor wiring, see [docs/multi-cli-setup.md](docs/multi-cli-setup.md).
+
+## TestFlight Distribution
+
+The App Store Connect app record uses the public name **Saqoosha Pager** because
+`Pager` is already taken globally. The installed app still displays as
+**Pager** from `CFBundleDisplayName`.
+
+Use [docs/testflight.md](docs/testflight.md) for the full archive/upload
+workflow. Important distribution facts:
+
+- Main app bundle ID: `sh.saqoo.Pager`
+- Notification Service Extension bundle ID: `sh.saqoo.Pager.NotificationService`
+- App Store Connect team: `G5G54TCH8W`
+- TestFlight builds use production APNs, so the deployed Worker must set
+  `APNS_USE_SANDBOX = "false"` before testing push notifications from
+  TestFlight.
+- Export compliance is predeclared with
+  `ITSAppUsesNonExemptEncryption = false` in both app Info.plists. The app uses
+  standard `URLSession` HTTPS and Keychain storage, not custom encryption.
 
 ## Project Structure
 

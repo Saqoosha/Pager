@@ -35,9 +35,23 @@ TOOL_INPUT=$(echo "$INPUT" | jq -r --arg t "$TOOL_NAME" '
   ) | if length > 800 then .[:800] + "…" else . end
 ')
 
+TIMEOUT="${PAGER_PERMISSION_TIMEOUT:-120}"
+case "$TIMEOUT" in
+  ''|*[!0-9]*) TIMEOUT=120 ;;
+esac
+
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+if [ ! -f "$SCRIPT_DIR/pager-env.sh" ] && command -v realpath >/dev/null 2>&1; then
+  SCRIPT_REALPATH="$(realpath "$SCRIPT_SOURCE" 2>/dev/null || printf '%s' "$SCRIPT_SOURCE")"
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_REALPATH")" && pwd)"
+fi
+if [ -f "$SCRIPT_DIR/pager-env.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$SCRIPT_DIR/pager-env.sh"
+fi
 WORKER_URL="${PAGER_WORKER_URL}"
 SECRET="${PAGER_SECRET}"
-TIMEOUT=120
 
 LOG="${PAGER_LOG_DIR:-$HOME/Library/Logs/Pager}/permission-request.log"
 mkdir -p "$(dirname "$LOG")" 2>/dev/null
@@ -51,17 +65,21 @@ if [ -z "$WORKER_URL" ] || [ -z "$SECRET" ]; then
 fi
 
 # Send request to worker
-SEND_RESULT=$(curl -s --max-time 10 -X POST "$WORKER_URL/request" \
+SEND_BODY=$(mktemp)
+trap 'rm -f "$SEND_BODY"' EXIT
+SEND_HTTP=$(curl -s --max-time 10 -o "$SEND_BODY" -w '%{http_code}' \
+  -X POST "$WORKER_URL/request" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SECRET" \
   -d "$(jq -n --arg rid "$REQUEST_ID" --arg tn "$TOOL_NAME" --arg ti "$TOOL_INPUT" --arg p "$PROJECT" \
     '{requestId: $rid, toolName: $tn, toolInput: $ti, project: $p}')")
+SEND_RESULT=$(cat "$SEND_BODY" 2>/dev/null)
 
 # Check if send succeeded
-if ! echo "$SEND_RESULT" | jq -e '.ok' > /dev/null 2>&1; then
+if [ "$SEND_HTTP" != "200" ] || ! echo "$SEND_RESULT" | jq -e '.ok' > /dev/null 2>&1; then
   ERROR_DETAIL=$(echo "$SEND_RESULT" | jq -r '.error // "unknown error"' 2>/dev/null || echo "request failed")
-  log "SEND failed: $ERROR_DETAIL"
-  echo "WARNING: Pager request failed: $ERROR_DETAIL. Falling back to interactive prompt." >&2
+  log "SEND failed: http=$SEND_HTTP err=$ERROR_DETAIL"
+  echo "WARNING: Pager request failed (http=$SEND_HTTP): $ERROR_DETAIL. Falling back to interactive prompt." >&2
   exit 0
 fi
 log "SEND ok, polling..."
