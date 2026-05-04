@@ -90,9 +90,9 @@ This requires the `com.apple.developer.usernotifications.communication` entitlem
 
 If the local files are lost, restore from 1Password:
 
-- `Pager — APNs Auth Key (QZA4KDCSKM)` — the `.p8` file (`op document get ... > credentials/AuthKey_<KEY_ID>.p8`)
-- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle ID, App Group
-- `Pager` — older entry, likely the `SHARED_SECRET`
+- `Pager — APNs Auth Key (QZA4KDCSKM)` — the `.p8` file (`op document get 'Pager — APNs Auth Key (QZA4KDCSKM)' --vault=Personal > credentials/AuthKey_QZA4KDCSKM.p8`)
+- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle ID, App Group, iOS bundle/extension/group IDs
+- `Pager` — `username` field = Worker URL, `password` field = `SHARED_SECRET` (for `PAGER_SECRET` env var)
 
 The actual `SHARED_SECRET` and `APNS_PRIVATE_KEY` values that the Worker uses live as Cloudflare Worker secrets and cannot be read back; re-set them with `wrangler secret put` if recovering on a new machine.
 

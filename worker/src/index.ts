@@ -119,6 +119,33 @@ async function parseJSON<T>(request: Request): Promise<T | null> {
 
 // --- Routes ---
 
+// --- LLM Shortener ---
+
+async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
+  try {
+    const response = await env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
+      messages: [
+        {
+          role: "system",
+          content: `You are a notification message shortener. Your job is to shorten notification messages for small screens (Apple Watch). Shorten the given text to under ${maxChars} characters while preserving the core meaning. Return ONLY the shortened text, no quotes, no explanation, no markdown. If the text is already short enough, return it unchanged.`,
+        },
+        {
+          role: "user",
+          content: text,
+        },
+      ],
+    });
+    const output = (response as { response?: string }).response;
+    if (typeof output === "string") {
+      return output.trim().slice(0, maxChars);
+    }
+    return text;
+  } catch (e) {
+    console.error("LLM shortener failed:", e);
+    return text;
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
