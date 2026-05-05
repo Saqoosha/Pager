@@ -102,7 +102,7 @@ used version `1.0.0`, build `202605011954`.
 
 - APNs key: stored in 1Password only (`Pager — APNs Auth Key (SRH3669YH6)`). Restore with:
   `op read 'op://Personal/Pager — APNs Auth Key (SRH3669YH6)/AuthKey_SRH3669YH6.p8' > credentials/AuthKey_SRH3669YH6.p8`
-- Worker secrets: `SHARED_SECRET`, `APNS_PRIVATE_KEY` (set via `wrangler secret put`)
+- Worker secrets: `SHARED_SECRET`, `APNS_PRIVATE_KEY`, `ANTHROPIC_API_KEY` (set via `wrangler secret put`)
 - Worker plaintext vars (see `wrangler.toml`): `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`
 - `worker/wrangler.toml` is committed (secrets stored via `wrangler secret put`, not in the file). `credentials/AuthKey_*.p8` is gitignored.
 
