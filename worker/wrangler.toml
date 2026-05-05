@@ -7,7 +7,7 @@ account_id = "c21a10f70a8036d2ad10687ab83bfb4b"
 APNS_BUNDLE_ID = "sh.saqoo.Pager"
 APNS_KEY_ID = "QZA4KDCSKM"
 APNS_TEAM_ID = "G5G54TCH8W"
-APNS_USE_SANDBOX = "true"
+APNS_USE_SANDBOX = "false"
 
 [[kv_namespaces]]
 binding = "REQUESTS"
