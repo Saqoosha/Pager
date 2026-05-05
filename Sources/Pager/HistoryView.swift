@@ -1,3 +1,4 @@
+import MarkdownUI
 import SwiftUI
 
 enum HistoryRoute: Hashable {
@@ -194,8 +195,11 @@ struct HistoryDetailView: View {
                             }
                         }
                         Divider()
-                        Text(NotificationHistoryItem.displayableBody(item.body))
-                            .font(.system(.body, design: .monospaced))
+                        Markdown(NotificationHistoryItem.displayableBody(item.body))
+                            .markdownBlockStyle(\.listItem) { configuration in
+                                configuration.label
+                                    .markdownMargin(top: .em(0.4), bottom: .em(0.2))
+                            }
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -259,3 +263,4 @@ struct HistoryDetailView: View {
         }
     }
 }
+

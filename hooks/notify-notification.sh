@@ -54,7 +54,7 @@ HTTP_CODE=$(curl -sS --max-time 5 -o "$HTTP_BODY" -w '%{http_code}' \
   -X POST "$WORKER_URL/notify" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SECRET" \
-  -d "$(jq -n --arg t "$TITLE" --arg m "$MSG" '{title: $t, message: $m, source: "claude"}')")
+  -d "$(jq -n --arg t "$TITLE" --arg m "$MSG" --argjson sb "$PAGER_SANDBOX" '{title: $t, message: $m, source: "claude", sandbox: $sb}')")
 CURL_EXIT=$?
 
 if [ $CURL_EXIT -ne 0 ] || [ "$HTTP_CODE" != "200" ]; then

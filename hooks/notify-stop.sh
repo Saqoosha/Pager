@@ -67,18 +67,14 @@ fi
 
 INPUT=$(cat)
 
+# Minimal markdown-aware cleanup: collapse excessive blank lines and trim
+# trailing whitespace on each line, but preserve the markdown structure
+# (newlines, bold, italic, code, links, headers, lists) so the iOS app
+# can render it with MarkdownUI.
 clean_text() {
-  sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' \
-    | sed -E 's/^#{1,6} //g' \
-    | sed 's/\*\*//g' \
-    | sed 's/[*`_~]//g' \
-    | sed -E 's/^[>-] //g' \
-    | sed 's/|//g' \
-    | sed -E 's/^[[:space:]]*---*[[:space:]]*$//g' \
-    | tr '\n' ' ' \
-    | sed -E 's/ +/ /g' \
-    | sed 's/^ //;s/ $//' \
-    | jq -Rrs '.[:200]'
+  sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' \
+    | sed -E '/^[[:space:]]*---*[[:space:]]*$/d' \
+    | cat -s
 }
 
 # Codex review subagents return their final result as a JSON object — most
@@ -236,8 +232,8 @@ HTTP_CODE=$(curl -sS --max-time 5 -o "$HTTP_BODY" -w '%{http_code}' \
   -X POST "$WORKER_URL/notify" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SECRET" \
-  -d "$(jq -n --arg t "[$PROJECT] $TITLE_VERB" --arg m "$MSG" --arg s "$SOURCE" \
-        '{title: $t, message: $m, source: $s}')")
+  -d "$(jq -n --arg t "[$PROJECT] $TITLE_VERB" --arg m "$MSG" --arg s "$SOURCE" --argjson sb "$PAGER_SANDBOX" \
+        '{title: $t, message: $m, source: $s, sandbox: $sb}')")
 CURL_EXIT=$?
 
 if [ $CURL_EXIT -ne 0 ] || [ "$HTTP_CODE" != "200" ]; then

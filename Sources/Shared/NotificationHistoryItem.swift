@@ -54,4 +54,5 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         if body == "null" { return "" }
         return body
     }
+
 }

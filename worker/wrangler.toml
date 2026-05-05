@@ -4,9 +4,9 @@ compatibility_date = "2024-12-01"
 account_id = "c21a10f70a8036d2ad10687ab83bfb4b"
 
 [vars]
-APNS_BUNDLE_ID = "sh.saqoo.Pager"
-APNS_KEY_ID = "QZA4KDCSKM"
-APNS_TEAM_ID = "G5G54TCH8W"
+APNS_BUNDLE_ID = "sh.saqoo.pager-app"
+APNS_KEY_ID = "SRH3669YH6"
+APNS_TEAM_ID = "VCFY2GFR89"
 APNS_USE_SANDBOX = "false"
 
 [[kv_namespaces]]

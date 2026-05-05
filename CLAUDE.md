@@ -25,9 +25,9 @@ both the main app and the Notification Service Extension write into.
 
 ## Targets
 
-- `Pager` — main app, bundle id `sh.saqoo.Pager`
-- `PagerNotificationService` — `UNNotificationServiceExtension`, bundle id `sh.saqoo.Pager.NotificationService`
-- App Group: `group.sh.saqoo.Pager` (both targets)
+- `Pager` — main app, bundle id `sh.saqoo.pager-app`
+- `PagerNotificationService` — `UNNotificationServiceExtension`, bundle id `sh.saqoo.pager-app.NotificationService`
+- App Group: `group.sh.saqoo.pager-app` (both targets)
 
 ## Build Commands
 
@@ -65,8 +65,9 @@ cd worker && wrangler deploy
 - Action buttons (`ALLOW_ACTION`, `DENY_ACTION`, `ALLOW_ALWAYS_ACTION`) are **not** marked `authenticationRequired`. With that flag, taps on a locked iPhone (including ones forwarded from Apple Watch) get queued until unlock and never reach the delegate. Trade-off: anyone holding the unlocked phone could tap Allow
 - Shared secret is stored in Keychain (`KeychainHelper`, kSecAttrAccessibleAfterFirstUnlock). Items first stored without that attribute are inaccessible while the device is locked, which silently 401s the watch-decision POST — the AppDelegate re-saves the secret at launch to migrate legacy entries
 - `HistoryStore` writes one JSON file per notification into the App Group container. NSE writes on append; main app overwrites on `updateDecision`. They never target the same file at the same time. `HistoryUpdateBridge` posts a Darwin notification so the main app can refresh the SwiftUI list live when the NSE writes a new entry
-- APNs sandbox is controlled by `APNS_USE_SANDBOX` worker var. Local Xcode installs use the development APNs environment; App Store Connect/TestFlight exports are re-signed with production APNs and require `APNS_USE_SANDBOX = "false"` on the deployed Worker.
+- APNs sandbox is controlled per-request via a `sandbox` boolean in the POST body. The `sendPush()` worker function accepts an optional `useSandbox` parameter that overrides the `APNS_USE_SANDBOX` worker var (which serves as the default for routes that don't pass it). Hooks read `PAGER_SANDBOX` env var (default `false`) and include it in every request. Set `PAGER_SANDBOX=true` in `settings.json` env for local development builds; leave unset for production/TestFlight.
 - Worker stores pending requests in KV with 5-minute TTL; decided requests get 60-second TTL (let TTL expire rather than delete-on-read so the poller doesn't miss the decision if its HTTP response is lost)
+- `/notify` pushes include a `messageFull` custom key in the APNs payload with the original unshortened message. The Notification Service Extension reads it (falling back to `aps.alert.body` if absent) and stores it as `NotificationHistoryItem.body`, so the iOS history view shows the full text even when the lock-screen banner is LLM-shortened for Apple Watch.
 - TestFlight/App Store Connect uploads require the App Store Connect app record to exist first. The public ASC name is **Saqoosha Pager** because `Pager` is already taken globally; the installed app display name remains `Pager`.
 - Export compliance is declared in both Info.plists with `ITSAppUsesNonExemptEncryption = false`. This is valid for the current app because it only uses standard `URLSession` HTTPS and Keychain storage, with no custom cryptography.
 
@@ -98,17 +99,19 @@ used version `1.0.0`, build `202605011954`.
 
 ## Credentials
 
-- APNs key: `credentials/AuthKey_<your-apns-key-id>.p8` (do NOT commit)
+- APNs key: stored in 1Password only (`Pager — APNs Auth Key (SRH3669YH6)`). Restore with:
+  `op read 'op://Personal/Pager — APNs Auth Key (SRH3669YH6)/AuthKey_SRH3669YH6.p8' > credentials/AuthKey_SRH3669YH6.p8`
 - Worker secrets: `SHARED_SECRET`, `APNS_PRIVATE_KEY` (set via `wrangler secret put`)
 - Worker plaintext vars (see `wrangler.toml`): `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`
-- `worker/wrangler.toml` is committed (secrets stored via `wrangler secret put`, not in the file). `credentials/AuthKey_*.p8` remains gitignored.
+- `worker/wrangler.toml` is committed (secrets stored via `wrangler secret put`, not in the file). `credentials/AuthKey_*.p8` is gitignored.
 
 ### Backup of real values (1Password — Personal vault)
 
-If the local files are lost, restore from 1Password:
+All credentials live in 1Password:
 
-- `Pager — APNs Auth Key (QZA4KDCSKM)` — the `.p8` file (`op document get 'Pager — APNs Auth Key (QZA4KDCSKM)' --vault=Personal > credentials/AuthKey_QZA4KDCSKM.p8`)
-- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle ID, App Group, iOS bundle/extension/group IDs
+- `Pager — APNs Auth Key (SRH3669YH6)` — Document with the `.p8` file
+- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle IDs, App Group
+- Development team: `VCFY2GFR89` (personal); Cloudflare account: `c21a10f70a8036d2ad10687ab83bfb4b` (Whatever Co.)
 - `Pager` — `username` field = Worker URL, `password` field = `SHARED_SECRET` (for `PAGER_SECRET` env var)
 
 The actual `SHARED_SECRET` and `APNS_PRIVATE_KEY` values that the Worker uses live as Cloudflare Worker secrets and cannot be read back; re-set them with `wrangler secret put` if recovering on a new machine.
@@ -117,4 +120,5 @@ The actual `SHARED_SECRET` and `APNS_PRIVATE_KEY` values that the Worker uses li
 
 - `PAGER_WORKER_URL` — Worker endpoint URL
 - `PAGER_SECRET` — Shared secret for auth
+- `PAGER_SANDBOX` — Set to `true` for local dev builds (sandbox APNs), omit for production
 - `PAGER_LOG_DIR` — Optional override for hook log location (default `~/Library/Logs/Pager`)

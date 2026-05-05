@@ -185,7 +185,7 @@ Replace the entire contents of `Sources/Pager/Pager.entitlements` with:
 	<string>development</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.sh.saqoo.Pager</string>
+		<string>group.sh.saqoo.pager-app</string>
 	</array>
 </dict>
 </plist>
@@ -193,7 +193,7 @@ Replace the entire contents of `Sources/Pager/Pager.entitlements` with:
 
 - [ ] **Step 2: Create the App Group in Apple Developer Portal (one-time, manual)**
 
-Open https://developer.apple.com/account/resources/identifiers/list/applicationGroup and create `group.sh.saqoo.Pager` if it doesn't already exist. Assign it to the `sh.saqoo.Pager` App ID (and to `sh.saqoo.Pager.NotificationService` when it exists — Task 5).
+Open https://developer.apple.com/account/resources/identifiers/list/applicationGroup and create `group.sh.saqoo.pager-app` if it doesn't already exist. Assign it to the `sh.saqoo.pager-app` App ID (and to `sh.saqoo.pager-app.NotificationService` when it exists — Task 5).
 
 If you cannot access the portal right now, `-allowProvisioningUpdates` in `xcodebuild` usually creates the group on first build. If that fails later, come back here.
 
@@ -295,7 +295,7 @@ import Foundation
 /// the Notification Service Extension because each entry lives in its own
 /// file (unique name = no write conflicts).
 enum HistoryStore {
-    static let appGroupID = "group.sh.saqoo.Pager"
+    static let appGroupID = "group.sh.saqoo.pager-app"
     static let maxItems = 100
 
     enum StoreError: Error {
@@ -456,7 +456,7 @@ Create `Sources/PagerNotificationService/NotificationService.entitlements`:
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.sh.saqoo.Pager</string>
+		<string>group.sh.saqoo.pager-app</string>
 	</array>
 </dict>
 </plist>
@@ -578,7 +578,7 @@ targets:
       - Sources/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.pager-app
         SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
@@ -589,7 +589,7 @@ targets:
       properties:
         aps-environment: development
         com.apple.security.application-groups:
-          - group.sh.saqoo.Pager
+          - group.sh.saqoo.pager-app
     dependencies:
       - target: PagerNotificationService
 
@@ -601,14 +601,14 @@ targets:
       - Sources/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager.NotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.pager-app.NotificationService
         SWIFT_STRICT_CONCURRENCY: complete
         INFOPLIST_FILE: Sources/PagerNotificationService/Info.plist
     entitlements:
       path: Sources/PagerNotificationService/NotificationService.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.sh.saqoo.Pager
+          - group.sh.saqoo.pager-app
 ```
 
 Note: the `dependencies: - target: PagerNotificationService` line on the main app target is what causes XcodeGen to embed the extension into the app bundle. The main app keeps `GENERATE_INFOPLIST_FILE: true`; only the extension uses an explicit Info.plist.

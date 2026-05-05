@@ -6,7 +6,7 @@ import Foundation
 /// extension posts after appending and the app posts a regular
 /// `NotificationCenter` event in response so SwiftUI views can observe it.
 enum HistoryUpdateBridge {
-    static let darwinName = "sh.saqoo.Pager.historyDidUpdate"
+    static let darwinName = "sh.saqoo.pager-app.historyDidUpdate"
 
     /// `NotificationCenter` name re-posted inside the host app whenever the
     /// Darwin event fires. SwiftUI views should listen here, not on Darwin
