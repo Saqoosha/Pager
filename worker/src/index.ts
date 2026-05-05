@@ -127,7 +127,7 @@ const AI_TIMEOUT_MS = 3000;
 export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
   try {
     const result = await Promise.race([
-      env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
+      env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
         messages: [
           {
             role: "system",
