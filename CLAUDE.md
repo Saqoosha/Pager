@@ -112,7 +112,7 @@ All credentials live in 1Password:
 
 - `Pager — APNs Auth Key (SRH3669YH6)` — Document with the `.p8` file
 - `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle IDs, App Group
-- Development team: `VCFY2GFR89` (personal); Cloudflare account: `c21a10f70a8036d2ad10687ab83bfb4b` (Whatever Co.)
+- Development team: `VCFY2GFR89` (personal); Cloudflare account: `0f56ad2619afc619cc2975dd0728f8a9` (Saqoosha)
 - `Pager` — `username` field = Worker URL, `password` field = `SHARED_SECRET` (for `PAGER_SECRET` env var)
 
 The actual `SHARED_SECRET` and `APNS_PRIVATE_KEY` values that the Worker uses live as Cloudflare Worker secrets and cannot be read back; re-set them with `wrangler secret put` if recovering on a new machine.

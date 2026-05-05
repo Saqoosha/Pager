@@ -18,7 +18,7 @@ Stats: 50 obs (15,968t read) | 187,189t work | 91% savings
 460 8:26p 🔴 Cursor stop hook restored and 1Password credential fallback added to all Pager hooks
 461 " 🔴 Two bugs found in pager-env.sh: wrong URL extracted from 1Password and $SCRIPT_DIR symlink resolution issue
 462 " 🔵 1Password "Pager — Cloudflare & APNs Config" notes contain only the GitHub URL — no Worker URL or SHARED_SECRET plaintext
-463 8:27p 🔵 Pager Worker URL confirmed: pager-relay.whatever-co.workers.dev — credentials in 1Password "Pager" item fields
+463 8:27p 🔵 Pager Worker URL confirmed: pager-relay.saqoosha.workers.dev — credentials in 1Password "Pager" item fields
 464 " 🔴 pager-env.sh fixed: uses correct 1Password item with username/password fields; all hooks use BASH_SOURCE+realpath for symlink-safe SCRIPT_DIR
 465 " 🔵 1Password fallback working but PAGER_SECRET mismatches deployed Worker SHARED_SECRET — HTTP 401 unauthorized
 466 8:28p 🔴 pager-env.sh credential priority reordered — notes-based SHARED_SECRET extraction tried before 1Password password field

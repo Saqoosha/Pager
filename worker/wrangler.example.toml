@@ -6,11 +6,12 @@ account_id = "<your-cf-account-id>"
 [vars]
 APNS_BUNDLE_ID = "sh.saqoo.pager-app"
 APNS_KEY_ID = "<your-apns-key-id>"
-APNS_TEAM_ID = "G5G54TCH8W"
+APNS_TEAM_ID = "<your-apns-team-id>"
 APNS_USE_SANDBOX = "false"  # "true" for Xcode dev builds, "false" for TestFlight/App Store
 
-[ai]
-binding = "AI"
+[[kv_namespaces]]
+binding = "REQUESTS"
+id = "<your-kv-namespace-id>"
 
 [[kv_namespaces]]
 binding = "REQUESTS"
