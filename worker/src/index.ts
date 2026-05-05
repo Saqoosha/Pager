@@ -1,5 +1,6 @@
-interface Env {
+export interface Env {
   REQUESTS: KVNamespace;
+  AI: Ai;
   APNS_PRIVATE_KEY: string;
   APNS_KEY_ID: string;
   APNS_TEAM_ID: string;
@@ -121,13 +122,13 @@ async function parseJSON<T>(request: Request): Promise<T | null> {
 
 // --- LLM Shortener ---
 
-async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
+export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
   try {
     const response = await env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
       messages: [
         {
           role: "system",
-          content: `You are a notification message shortener. Your job is to shorten notification messages for small screens (Apple Watch). Shorten the given text to under ${maxChars} characters while preserving the core meaning. Return ONLY the shortened text, no quotes, no explanation, no markdown. If the text is already short enough, return it unchanged.`,
+          content: `You are a notification message shortener for Apple Watch. Translate and shorten the given message into concise Japanese (端的で簡潔な日本語). Keep it under ${maxChars} characters. Preserve the core meaning. Return ONLY the Japanese text, no quotes, no explanation, no markdown.`,
         },
         {
           role: "user",
@@ -328,11 +329,19 @@ export default {
         if (!deviceToken) {
           return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
         }
+        // Apple Watch has very limited display space; shorten long bodies
+        // via Workers AI. If the LLM call fails, the original text passes
+        // through unchanged.
+        const WATCH_BODY_MAX_CHARS = 100;
+        let message = body.message || "";
+        if (message.length > WATCH_BODY_MAX_CHARS) {
+          message = await shortenWithLLM(env, message, WATCH_BODY_MAX_CHARS);
+        }
         const payload: Record<string, unknown> = {
           aps: {
             alert: {
               title: body.title || "Pager",
-              body: body.message || "",
+              body: message,
             },
             sound: "default",
             "interruption-level": "time-sensitive",

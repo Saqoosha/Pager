@@ -84,7 +84,7 @@ This requires the `com.apple.developer.usernotifications.communication` entitlem
 - APNs key: `credentials/AuthKey_<your-apns-key-id>.p8` (do NOT commit)
 - Worker secrets: `SHARED_SECRET`, `APNS_PRIVATE_KEY` (set via `wrangler secret put`)
 - Worker plaintext vars (see `wrangler.toml`): `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`
-- Local-only files (gitignored): `worker/wrangler.toml` and `credentials/AuthKey_*.p8`. Only `worker/wrangler.example.toml` is committed.
+- `worker/wrangler.toml` is committed (secrets stored via `wrangler secret put`, not in the file). `credentials/AuthKey_*.p8` remains gitignored.
 
 ### Backup of real values (1Password — Personal vault)
 
