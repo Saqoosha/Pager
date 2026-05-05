@@ -73,8 +73,8 @@ INPUT=$(cat)
 # can render it with MarkdownUI.
 clean_text() {
   sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' \
-    | sed -E '/^[[:space:]]*$/d' \
-    | sed -E '/^[[:space:]]*---*[[:space:]]*$/d'
+    | sed -E '/^[[:space:]]*---*[[:space:]]*$/d' \
+    | cat -s
 }
 
 # Codex review subagents return their final result as a JSON object — most
