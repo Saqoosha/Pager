@@ -60,9 +60,10 @@ async function generateAPNsJWT(env: Env): Promise<string> {
   return `${unsigned}.${base64url(signature)}`;
 }
 
-async function sendPush(env: Env, deviceToken: string, payload: object): Promise<Response> {
+async function sendPush(env: Env, deviceToken: string, payload: object, useSandbox?: boolean): Promise<Response> {
   const jwt = await generateAPNsJWT(env);
-  const apnsHost = env.APNS_USE_SANDBOX === "true" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
+  const sandbox = useSandbox ?? env.APNS_USE_SANDBOX === "true";
+  const apnsHost = sandbox ? "api.sandbox.push.apple.com" : "api.push.apple.com";
   return fetch(`https://${apnsHost}/3/device/${deviceToken}`, {
     method: "POST",
     headers: {
@@ -207,6 +208,7 @@ export default {
           toolInput: string;
           project: string;
           source?: string;
+          sandbox?: boolean;
         }>(request);
 
         if (!body?.requestId || !body.toolName) return badRequest("requestId and toolName required");
@@ -264,7 +266,7 @@ export default {
           source,
         };
 
-        const pushResult = await sendPush(env, deviceToken, apnsPayload);
+        const pushResult = await sendPush(env, deviceToken, apnsPayload, body.sandbox);
         if (!pushResult.ok) {
           const err = await pushResult.text();
           return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {
@@ -334,7 +336,7 @@ export default {
 
       // POST /notify — send plain notification (no action buttons)
       if (path === "/notify" && request.method === "POST") {
-        const body = await parseJSON<{ title: string; message: string; source?: string }>(request);
+        const body = await parseJSON<{ title: string; message: string; source?: string; sandbox?: boolean }>(request);
         if (!body) return badRequest("invalid JSON body");
         // Allowlist source server-side so the extension can trust it without
         // re-validating. Reject typos loudly to match the /response style
@@ -351,7 +353,8 @@ export default {
         // via Anthropic API (Haiku). If the LLM call fails, the original
         // text passes through unchanged.
         const WATCH_BODY_MAX_CHARS = 100;
-        let message = body.message || "";
+        const originalMessage = body.message || "";
+        let message = originalMessage;
         if (message.length > WATCH_BODY_MAX_CHARS) {
           message = await shortenWithLLM(env, message, WATCH_BODY_MAX_CHARS);
         }
@@ -365,9 +368,10 @@ export default {
             "interruption-level": "time-sensitive",
             "mutable-content": 1,
           },
+          messageFull: originalMessage,
         };
         if (source) payload.source = source;
-        const pushResult = await sendPush(env, deviceToken, payload);
+        const pushResult = await sendPush(env, deviceToken, payload, body.sandbox);
         if (!pushResult.ok) {
           const err = await pushResult.text();
           return new Response(JSON.stringify({ error: "apns_failed", detail: err, status: pushResult.status }), {

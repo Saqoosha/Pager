@@ -71,8 +71,8 @@ SEND_HTTP=$(curl -s --max-time 10 -o "$SEND_BODY" -w '%{http_code}' \
   -X POST "$WORKER_URL/request" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SECRET" \
-  -d "$(jq -n --arg rid "$REQUEST_ID" --arg tn "$TOOL_NAME" --arg ti "$TOOL_INPUT" --arg p "$PROJECT" \
-    '{requestId: $rid, toolName: $tn, toolInput: $ti, project: $p}')")
+  -d "$(jq -n --arg rid "$REQUEST_ID" --arg tn "$TOOL_NAME" --arg ti "$TOOL_INPUT" --arg p "$PROJECT" --argjson sb "$PAGER_SANDBOX" \
+    '{requestId: $rid, toolName: $tn, toolInput: $ti, project: $p, sandbox: $sb}')")
 SEND_RESULT=$(cat "$SEND_BODY" 2>/dev/null)
 
 # Check if send succeeded

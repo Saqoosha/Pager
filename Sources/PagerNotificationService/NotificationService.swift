@@ -17,7 +17,9 @@ final class NotificationService: UNNotificationServiceExtension {
         // so the main app's tap-to-history lookup works for both push types.
         let historyId = (userInfo["requestId"] as? String) ?? UUID().uuidString
 
-        let fullBody = (userInfo["toolInputFull"] as? String) ?? request.content.body
+        let fullBody = (userInfo["toolInputFull"] as? String)
+            ?? (userInfo["messageFull"] as? String)
+            ?? request.content.body
         let rawSource = (userInfo["source"] as? String) ?? ""
 
         let item = NotificationHistoryItem(

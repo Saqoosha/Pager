@@ -62,3 +62,9 @@ load_pager_env() {
 }
 
 load_pager_env
+
+# APNs sandbox toggle for local development.
+# Set PAGER_SANDBOX=true to target the development APNs server
+# (matching local Xcode builds). Leave unset for production.
+PAGER_SANDBOX="${PAGER_SANDBOX:-false}"
+export PAGER_SANDBOX
