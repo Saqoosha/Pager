@@ -29,7 +29,7 @@ SwiftUI app with five responsibilities:
 2. **Notification categories** — Registers `PERMISSION_REQUEST` category with three `UNNotificationAction` buttons (Allow, Deny, Always Allow)
 3. **Action handling** — `NotificationDelegate` captures the user's button tap, sends decision to Worker, updates the local history entry
 4. **Settings UI** — Worker URL + shared secret (Keychain), device token, register / test buttons
-5. **History view** — Lists every push received and its decision; tapping a notification jumps directly to the detail page
+5. **History view** — Lists every push received and its decision; tapping a notification jumps directly to the detail page where the body is rendered with MarkdownUI
 
 ### Notification Service Extension (`Sources/PagerNotificationService/`)
 
@@ -131,12 +131,19 @@ All non-OPTIONS routes require `Authorization: Bearer <SHARED_SECRET>`, compared
 
 #### Payload size limits
 
-`/request` clamps incoming strings before pushing to APNs so an adversarial payload cannot exceed APNs' 4KB limit:
+Both `/request` and `/notify` cap string fields to keep the APNs payload under the
+4KB limit. Truncation appends `…` when a field exceeds its cap.
 
+**`/request`:**
 - `toolName` ≤ 120 chars
 - `project` ≤ 120 chars
-- `toolInputFull` ≤ 3000 chars (truncated with `…`)
+- `toolInputFull` ≤ 3000 chars
 - `inputPreview` (the lock-screen body) ≤ 200 chars
+
+**`/notify`:**
+- `messageFull` ≤ 3000 chars (stored in history and rendered as markdown)
+- Lock-screen body is LLM-shortened to ~100 chars for Apple Watch legibility;
+  the original is always preserved in `messageFull`
 
 ### CLI Hooks (`hooks/`)
 
@@ -154,7 +161,10 @@ All non-OPTIONS routes require `Authorization: Bearer <SHARED_SECRET>`, compared
 
 #### `notify-notification.sh` / `notify-stop.sh` (async notification hooks)
 
-POST to `/notify` with title, message, and `source`. Markdown formatting is stripped before send.
+POST to `/notify` with title, message, and `source`. Markdown formatting is
+preserved (only blank lines and horizontal rules are cleaned up) so the iOS
+app can render rich text with MarkdownUI. The lock-screen banner is
+LLM-shortened to ~100 characters of plain Japanese by the Worker.
 
 `notify-stop.sh` is multi-CLI:
 
@@ -230,11 +240,12 @@ encryption-focused features.
 ```json
 {
   "aps": {
-    "alert": { "title": "title", "body": "message" },
+    "alert": { "title": "title", "body": "LLM-shortened plain Japanese (≤100 chars)" },
     "sound": "default",
     "interruption-level": "time-sensitive",
     "mutable-content": 1
   },
+  "messageFull": "original markdown message (≤3000 chars, for history + MarkdownUI rendering)",
   "source": "claude" | "codex" | "cursor"   // optional
 }
 ```

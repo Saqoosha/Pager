@@ -73,6 +73,11 @@ Access 187k tokens of past work via get_observations([IDs]) or mem-search skill.
 - App Store Connect uploads require the app record to exist before running
   `xcodebuild -exportArchive`. If export fails with
   `missingApp(bundleId: "sh.saqoo.pager-app")`, create the ASC app record first.
+- Notification body text is stored as raw markdown and rendered with MarkdownUI
+  (`github.com/gonzalezreal/swift-markdown-ui`, v2.4.1) in the History detail
+  view. Markdown formatting is only minimally cleaned (blank lines and horizontal
+  rules) on the hook side, so bold, italic, code blocks, lists, headers, links,
+  and tables all render as intended.
 - TestFlight builds use production APNs. Set Worker var
   `APNS_USE_SANDBOX = "false"` before testing a TestFlight install.
 - Export compliance is predeclared with
