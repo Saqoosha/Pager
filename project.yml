@@ -1,4 +1,8 @@
 name: Pager
+packages:
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: 2.0.0
 options:
   bundleIdPrefix: sh.saqoo
   deploymentTarget:
@@ -34,6 +38,7 @@ targets:
           - group.sh.saqoo.pager-app
     dependencies:
       - target: PagerNotificationService
+      - package: MarkdownUI
 
   PagerNotificationService:
     type: app-extension

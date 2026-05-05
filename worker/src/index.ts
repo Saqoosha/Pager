@@ -349,11 +349,17 @@ export default {
         if (!deviceToken) {
           return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
         }
+        // Cap messageFull at 3000 chars (same as MAX_FULL_INPUT for /request)
+        // to keep the APNs payload under the 4KB limit.
+        const MAX_MESSAGE = 3000;
+        const rawMessage = body.message || "";
+        const originalMessage = rawMessage.length > MAX_MESSAGE
+          ? rawMessage.slice(0, MAX_MESSAGE) + "…"
+          : rawMessage;
         // Apple Watch has very limited display space; shorten long bodies
         // via Anthropic API (Haiku). If the LLM call fails, the original
         // text passes through unchanged.
         const WATCH_BODY_MAX_CHARS = 100;
-        const originalMessage = body.message || "";
         let message = originalMessage;
         if (message.length > WATCH_BODY_MAX_CHARS) {
           message = await shortenWithLLM(env, message, WATCH_BODY_MAX_CHARS);

@@ -18,6 +18,7 @@
 		4E2C1E5DC1DC5BD2FEB28CD1 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEFE54D56A8C8E87D243B0B5 /* NetworkService.swift */; };
 		5716A5EE55A9025073CBB3D5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A09C3E9C2A033C1BAF452E2 /* Assets.xcassets */; };
 		611B98C3C24E7BD9E72785FD /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49EECA2DA461D7983ACBC13A /* HistoryStore.swift */; };
+		7F32FFE1DBB2E1427EDA119C /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2C9E35D1143C9227ACF87DBF /* MarkdownUI */; };
 		8C3FE5D2B769579A56575179 /* cursor.png in Resources */ = {isa = PBXBuildFile; fileRef = 431ABCEF41949C9F31694067 /* cursor.png */; };
 		968CB4D37CA25830F13E3044 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB0685E1D1C93FF83870299 /* AppDelegate.swift */; };
 		9885EEFFCF286FC756A786FE /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9430750D3E98EB3FC6086864 /* AppState.swift */; };
@@ -78,6 +79,17 @@
 		FB99C7BC1B8CCD611314D8FE /* NotificationService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationService.entitlements; sourceTree = "<group>"; };
 		FD74461D0AF321BC1772CD8D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2F2E3CAC9693A76529C99F8A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7F32FFE1DBB2E1427EDA119C /* MarkdownUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0D49E7601823E1540ECC3A1D /* PagerNotificationService */ = {
@@ -161,6 +173,7 @@
 			buildPhases = (
 				F86A0503C56408014CCE19E6 /* Sources */,
 				F46BC7CDABA9C93A41DFA3C3 /* Resources */,
+				2F2E3CAC9693A76529C99F8A /* Frameworks */,
 				6B9C719C814A9B928E76EA1E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -170,6 +183,7 @@
 			);
 			name = Pager;
 			packageProductDependencies = (
+				2C9E35D1143C9227ACF87DBF /* MarkdownUI */,
 			);
 			productName = Pager;
 			productReference = EA6551922E635FB22E15AE1E /* Pager.app */;
@@ -219,6 +233,9 @@
 			);
 			mainGroup = ED6301D49F0A86250F50A730;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				21D5E05539501E066C8C2284 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 56571CA6709FD5839561A045 /* Products */;
 			projectDirPath = "";
@@ -520,6 +537,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		21D5E05539501E066C8C2284 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2C9E35D1143C9227ACF87DBF /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21D5E05539501E066C8C2284 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B105C5306482049441977B0A /* Project object */;
 }

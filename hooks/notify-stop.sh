@@ -67,18 +67,14 @@ fi
 
 INPUT=$(cat)
 
+# Minimal markdown-aware cleanup: collapse excessive blank lines and trim
+# trailing whitespace on each line, but preserve the markdown structure
+# (newlines, bold, italic, code, links, headers, lists) so the iOS app
+# can render it with AttributedString.
 clean_text() {
-  sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' \
-    | sed -E 's/^#{1,6} //g' \
-    | sed 's/\*\*//g' \
-    | sed 's/[*`_~]//g' \
-    | sed -E 's/^[>-] //g' \
-    | sed 's/|//g' \
-    | sed -E 's/^[[:space:]]*---*[[:space:]]*$//g' \
-    | tr '\n' ' ' \
-    | sed -E 's/ +/ /g' \
-    | sed 's/^ //;s/ $//' \
-    | jq -Rrs '.[:200]'
+  sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' \
+    | sed -E '/^[[:space:]]*$/d' \
+    | sed -E '/^[[:space:]]*---*[[:space:]]*$/d'
 }
 
 # Codex review subagents return their final result as a JSON object — most

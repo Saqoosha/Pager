@@ -32,7 +32,7 @@ TOOL_INPUT=$(echo "$INPUT" | jq -r --arg t "$TOOL_NAME" '
        | join("\n\n"))
     else ($i | tostring)
     end
-  ) | if length > 800 then .[:800] + "…" else . end
+  ) | if length > 2000 then .[:2000] + "…" else . end
 ')
 
 TIMEOUT="${PAGER_PERMISSION_TIMEOUT:-120}"
