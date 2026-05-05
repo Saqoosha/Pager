@@ -36,9 +36,23 @@ describe("shortenWithLLM", () => {
     expect(result).toBe(original);
   });
 
-  it("returns original text when AI response is empty", async () => {
+  it("returns original text when AI response field is missing", async () => {
     const original = "Another long message without AI response";
     const env = mockEnv(undefined);
+    const result = await shortenWithLLM(env, original, 100);
+    expect(result).toBe(original);
+  });
+
+  it("returns original text when AI returns empty string", async () => {
+    const original = "A message that must not be lost";
+    const env = mockEnv("");
+    const result = await shortenWithLLM(env, original, 100);
+    expect(result).toBe(original);
+  });
+
+  it("returns original text when AI returns whitespace only", async () => {
+    const original = "Important notification content";
+    const env = mockEnv("   ");
     const result = await shortenWithLLM(env, original, 100);
     expect(result).toBe(original);
   });

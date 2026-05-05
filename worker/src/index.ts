@@ -122,27 +122,45 @@ async function parseJSON<T>(request: Request): Promise<T | null> {
 
 // --- LLM Shortener ---
 
+const AI_TIMEOUT_MS = 3000;
+
 export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
   try {
-    const response = await env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
-      messages: [
-        {
-          role: "system",
-          content: `You are a notification message shortener for Apple Watch. Translate and shorten the given message into concise Japanese (端的で簡潔な日本語). Keep it under ${maxChars} characters. Preserve the core meaning. Return ONLY the Japanese text, no quotes, no explanation, no markdown.`,
-        },
-        {
-          role: "user",
-          content: text,
-        },
-      ],
-    });
-    const output = (response as { response?: string }).response;
-    if (typeof output === "string") {
+    const result = await Promise.race([
+      env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
+        messages: [
+          {
+            role: "system",
+            content: `You are a notification message shortener for Apple Watch. Translate and shorten the given message into concise Japanese (端的で簡潔な日本語). Keep it under ${maxChars} characters. Preserve the core meaning. Return ONLY the Japanese text, no quotes, no explanation, no markdown.`,
+          },
+          {
+            role: "user",
+            content: text,
+          },
+        ],
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("AI timeout")), AI_TIMEOUT_MS),
+      ),
+    ]);
+    const output = (result as { response?: string }).response;
+    if (typeof output === "string" && output.trim().length > 0) {
       return output.trim().slice(0, maxChars);
+    }
+    if (typeof output === "string") {
+      console.error("LLM shortener: empty response from AI");
+    } else {
+      console.error("LLM shortener: unexpected response shape", {
+        outputType: typeof output,
+      });
     }
     return text;
   } catch (e) {
-    console.error("LLM shortener failed:", e);
+    console.error("LLM shortener failed:", {
+      error: String(e),
+      maxChars,
+      textLength: text.length,
+    });
     return text;
   }
 }
