@@ -99,17 +99,18 @@ used version `1.0.0`, build `202605011954`.
 
 ## Credentials
 
-- APNs key: `credentials/AuthKey_<your-apns-key-id>.p8` (do NOT commit)
+- APNs key: stored in 1Password only (`Pager — APNs Auth Key (SRH3669YH6)`). Restore with:
+  `op read 'op://Personal/Pager — APNs Auth Key (SRH3669YH6)/AuthKey_SRH3669YH6.p8' > credentials/AuthKey_SRH3669YH6.p8`
 - Worker secrets: `SHARED_SECRET`, `APNS_PRIVATE_KEY` (set via `wrangler secret put`)
 - Worker plaintext vars (see `wrangler.toml`): `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`
-- `worker/wrangler.toml` is committed (secrets stored via `wrangler secret put`, not in the file). `credentials/AuthKey_*.p8` remains gitignored.
+- `worker/wrangler.toml` is committed (secrets stored via `wrangler secret put`, not in the file). `credentials/AuthKey_*.p8` is gitignored.
 
 ### Backup of real values (1Password — Personal vault)
 
-If the local files are lost, restore from 1Password:
+All credentials live in 1Password:
 
-- `Pager — APNs Auth Key (SRH3669YH6)` — the `.p8` file (`op read 'op://Personal/Pager — APNs Auth Key (SRH3669YH6)/AuthKey_SRH3669YH6.p8' > credentials/AuthKey_SRH3669YH6.p8`)
-- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key IDs, Team ID, Bundle IDs, App Group
+- `Pager — APNs Auth Key (SRH3669YH6)` — Document with the `.p8` file
+- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle IDs, App Group
 - Development team: `VCFY2GFR89` (personal); Cloudflare account: `c21a10f70a8036d2ad10687ab83bfb4b` (Whatever Co.)
 - `Pager` — `username` field = Worker URL, `password` field = `SHARED_SECRET` (for `PAGER_SECRET` env var)
 
