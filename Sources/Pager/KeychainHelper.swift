@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainHelper {
-    private static let service = "sh.saqoo.Pager"
+    private static let service = "sh.saqoo.pager-app"
 
     @discardableResult
     static func save(key: String, value: String) -> OSStatus {

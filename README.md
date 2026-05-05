@@ -47,7 +47,7 @@ cp wrangler.example.toml wrangler.toml
 #   - account_id            → your Cloudflare account id
 #   - APNS_KEY_ID           → your APNs Auth Key id (the part after AuthKey_ in the .p8 filename)
 #   - APNS_TEAM_ID          → your Apple Developer Team id
-#   - APNS_BUNDLE_ID        → your iOS app bundle id (default sh.saqoo.Pager — change if you fork)
+#   - APNS_BUNDLE_ID        → your iOS app bundle id (default sh.saqoo.pager-app — change if you fork)
 #   - APNS_USE_SANDBOX      → "true" for development APNs, "false" for production
 
 # Create the KV namespace and copy its id into wrangler.toml ([[kv_namespaces]].id)
@@ -136,8 +136,8 @@ The App Store Connect app record uses the public name **Saqoosha Pager** because
 Use [docs/testflight.md](docs/testflight.md) for the full archive/upload
 workflow. Important distribution facts:
 
-- Main app bundle ID: `sh.saqoo.Pager`
-- Notification Service Extension bundle ID: `sh.saqoo.Pager.NotificationService`
+- Main app bundle ID: `sh.saqoo.pager-app`
+- Notification Service Extension bundle ID: `sh.saqoo.pager-app.NotificationService`
 - App Store Connect team: `G5G54TCH8W`
 - TestFlight builds use production APNs, so the deployed Worker must set
   `APNS_USE_SANDBOX = "false"` before testing push notifications from
@@ -186,7 +186,7 @@ scripts/
 
 ## Bundle ID
 
-Default: `sh.saqoo.Pager` (extension: `sh.saqoo.Pager.NotificationService`).
+Default: `sh.saqoo.pager-app` (extension: `sh.saqoo.pager-app.NotificationService`).
 Forks should change the prefix in `project.yml` to a domain they own.
 
 ## License

@@ -25,9 +25,9 @@ both the main app and the Notification Service Extension write into.
 
 ## Targets
 
-- `Pager` — main app, bundle id `sh.saqoo.Pager`
-- `PagerNotificationService` — `UNNotificationServiceExtension`, bundle id `sh.saqoo.Pager.NotificationService`
-- App Group: `group.sh.saqoo.Pager` (both targets)
+- `Pager` — main app, bundle id `sh.saqoo.pager-app`
+- `PagerNotificationService` — `UNNotificationServiceExtension`, bundle id `sh.saqoo.pager-app.NotificationService`
+- App Group: `group.sh.saqoo.pager-app` (both targets)
 
 ## Build Commands
 
@@ -108,8 +108,9 @@ used version `1.0.0`, build `202605011954`.
 
 If the local files are lost, restore from 1Password:
 
-- `Pager — APNs Auth Key (QZA4KDCSKM)` — the `.p8` file (`op document get 'Pager — APNs Auth Key (QZA4KDCSKM)' --vault=Personal > credentials/AuthKey_QZA4KDCSKM.p8`)
-- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key ID, Team ID, Bundle ID, App Group, iOS bundle/extension/group IDs
+- `Pager — APNs Auth Key (SRH3669YH6)` — the `.p8` file (`op document get 'Pager — APNs Auth Key (SRH3669YH6)' --vault=Personal > credentials/AuthKey_SRH3669YH6.p8`)
+- `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key IDs, Team ID, Bundle IDs, App Group
+- Development team: `VCFY2GFR89` (personal); Cloudflare account: `c21a10f70a8036d2ad10687ab83bfb4b` (Whatever Co.)
 - `Pager` — `username` field = Worker URL, `password` field = `SHARED_SECRET` (for `PAGER_SECRET` env var)
 
 The actual `SHARED_SECRET` and `APNS_PRIVATE_KEY` values that the Worker uses live as Cloudflare Worker secrets and cannot be read back; re-set them with `wrangler secret put` if recovering on a new machine.

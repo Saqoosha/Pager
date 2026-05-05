@@ -203,10 +203,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					886824445F3DE4B6196088D9 = {
-						DevelopmentTeam = G5G54TCH8W;
+						DevelopmentTeam = VCFY2GFR89;
 					};
 					9FC17D7227B7EC4B9BDF4D43 = {
-						DevelopmentTeam = G5G54TCH8W;
+						DevelopmentTeam = VCFY2GFR89;
 					};
 				};
 			};
@@ -330,7 +330,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = G5G54TCH8W;
+				DEVELOPMENT_TEAM = VCFY2GFR89;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -371,7 +371,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager;
+				PRODUCT_BUNDLE_IDENTIFIER = "sh.saqoo.pager-app";
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -388,7 +388,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager.NotificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = "sh.saqoo.pager-app.NotificationService";
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -406,7 +406,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager;
+				PRODUCT_BUNDLE_IDENTIFIER = "sh.saqoo.pager-app";
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -423,7 +423,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = sh.saqoo.Pager.NotificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = "sh.saqoo.pager-app.NotificationService";
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -466,7 +466,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = G5G54TCH8W;
+				DEVELOPMENT_TEAM = VCFY2GFR89;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;

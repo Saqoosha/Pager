@@ -49,7 +49,7 @@ Users want to open the app and read the full content of past notifications, incl
 **Components:**
 
 - **PagerNotificationService** — new NSE target. Runs before every push is shown, captures the full payload into shared storage.
-- **App Group** `group.sh.saqoo.Pager` — shared container between the extension and the main app.
+- **App Group** `group.sh.saqoo.pager-app` — shared container between the extension and the main app.
 - **Shared/HistoryStore** — compiled into both targets. Handles JSON read/write in the App Group container.
 - **Main app additions** — `HistoryListView`, `HistoryDetailView`, `AppState` for deep-link navigation, tap handling in `NotificationDelegate`.
 
@@ -147,29 +147,29 @@ Both targets include `Sources/Shared` in their `sources` list in `project.yml`.
       - Sources/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.Pager.NotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: sh.saqoo.pager-app.NotificationService
         SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: true
     entitlements:
       path: Sources/PagerNotificationService/NotificationService.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.sh.saqoo.Pager
+          - group.sh.saqoo.pager-app
 ```
 
 Main app target: add `Sources/Shared` to `sources`, add the App Group entitlement to `Pager.entitlements`, and declare that the extension is embedded in the app.
 
 ### Provisioning
 
-1. Create App Group `group.sh.saqoo.Pager` in Apple Developer Portal.
-2. Assign the group to both bundle IDs (`sh.saqoo.Pager` and `sh.saqoo.Pager.NotificationService`).
+1. Create App Group `group.sh.saqoo.pager-app` in Apple Developer Portal.
+2. Assign the group to both bundle IDs (`sh.saqoo.pager-app` and `sh.saqoo.pager-app.NotificationService`).
 3. Regenerate provisioning profiles. `xcodebuild -allowProvisioningUpdates` should handle this automatically; fall back to manual if needed.
 
 ## `HistoryStore` API
 
 ```swift
 enum HistoryStore {
-    static let appGroupID = "group.sh.saqoo.Pager"
+    static let appGroupID = "group.sh.saqoo.pager-app"
     static let maxItems = 100
 
     static func containerURL() -> URL?

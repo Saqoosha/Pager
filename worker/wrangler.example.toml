@@ -4,7 +4,7 @@ compatibility_date = "2024-12-01"
 account_id = "<your-cf-account-id>"
 
 [vars]
-APNS_BUNDLE_ID = "sh.saqoo.Pager"
+APNS_BUNDLE_ID = "sh.saqoo.pager-app"
 APNS_KEY_ID = "<your-apns-key-id>"
 APNS_TEAM_ID = "G5G54TCH8W"
 APNS_USE_SANDBOX = "false"  # "true" for Xcode dev builds, "false" for TestFlight/App Store

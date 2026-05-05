@@ -4,14 +4,14 @@
 
 - Public App Store Connect name: **Saqoosha Pager**
 - Installed app display name: **Pager**
-- Main bundle ID: `sh.saqoo.Pager`
-- Notification Service Extension bundle ID: `sh.saqoo.Pager.NotificationService`
+- Main bundle ID: `sh.saqoo.pager-app`
+- Notification Service Extension bundle ID: `sh.saqoo.pager-app.NotificationService`
 - Team ID: `G5G54TCH8W`
-- SKU: `sh.saqoo.Pager`
+- SKU: `sh.saqoo.pager-app`
 
 The App Store Connect app record must exist before upload. If an
 `xcodebuild -exportArchive` run fails with
-`missingApp(bundleId: "sh.saqoo.Pager")`, create the app in App Store Connect
+`missingApp(bundleId: "sh.saqoo.pager-app")`, create the app in App Store Connect
 first. The public name has to be globally unique, but it does not need to match
 the installed `CFBundleDisplayName`.
 
@@ -118,7 +118,7 @@ used for device installs from Xcode.
 
 ## Troubleshooting
 
-- `missingApp(bundleId: "sh.saqoo.Pager")`: create the App Store Connect app
+- `missingApp(bundleId: "sh.saqoo.pager-app")`: create the App Store Connect app
   record before uploading.
 - App name unavailable: pick a globally unique ASC name such as
   `Saqoosha Pager`; keep `CFBundleDisplayName` as `Pager`.

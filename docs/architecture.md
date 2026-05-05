@@ -45,7 +45,7 @@ Compiled into both targets:
 
 - `NotificationHistoryItem` — Codable record (id, receivedAt, title, body, decision, decidedAt, source…)
 - `HistoryStore` — JSON-per-entry filesystem store inside the App Group container; pruning, atomic writes, separate writer paths for NSE (append) and main app (updateDecision)
-- `HistoryUpdateBridge` — Darwin notification (`sh.saqoo.Pager.historyDidUpdate`) re-posted as a regular `NotificationCenter` event for SwiftUI
+- `HistoryUpdateBridge` — Darwin notification (`sh.saqoo.pager-app.historyDidUpdate`) re-posted as a regular `NotificationCenter` event for SwiftUI
 
 ### Class Diagram
 

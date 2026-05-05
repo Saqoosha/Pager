@@ -68,11 +68,11 @@ Access 187k tokens of past work via get_observations([IDs]) or mem-search skill.
 
 - TestFlight/App Store Connect app name: **Saqoosha Pager**. The installed app
   still displays as **Pager** from `CFBundleDisplayName`.
-- Bundle IDs: main app `sh.saqoo.Pager`; Notification Service Extension
-  `sh.saqoo.Pager.NotificationService`.
+- Bundle IDs: main app `sh.saqoo.pager-app`; Notification Service Extension
+  `sh.saqoo.pager-app.NotificationService`.
 - App Store Connect uploads require the app record to exist before running
   `xcodebuild -exportArchive`. If export fails with
-  `missingApp(bundleId: "sh.saqoo.Pager")`, create the ASC app record first.
+  `missingApp(bundleId: "sh.saqoo.pager-app")`, create the ASC app record first.
 - TestFlight builds use production APNs. Set Worker var
   `APNS_USE_SANDBOX = "false"` before testing a TestFlight install.
 - Export compliance is predeclared with
