@@ -1,0 +1,17 @@
+name = "pager-relay"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+account_id = "c21a10f70a8036d2ad10687ab83bfb4b"
+
+[vars]
+APNS_BUNDLE_ID = "sh.saqoo.Pager"
+APNS_KEY_ID = "QZA4KDCSKM"
+APNS_TEAM_ID = "G5G54TCH8W"
+APNS_USE_SANDBOX = "true"
+
+[[kv_namespaces]]
+binding = "REQUESTS"
+id = "e1e31eaedacb46d99c15cb1cb55adcbf"
+
+[ai]
+binding = "AI"

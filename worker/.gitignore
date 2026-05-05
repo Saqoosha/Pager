@@ -2,6 +2,5 @@ node_modules/
 dist/
 .wrangler/
 
-# Local wrangler config with real account_id, KV namespace, etc.
-# Copy from wrangler.example.toml and fill in your own values.
-wrangler.toml
+# Secrets are managed via wrangler secret put, not stored in wrangler.toml.
+# wrangler.toml is committed — see wrangler.example.toml for the template.

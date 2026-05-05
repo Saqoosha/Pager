@@ -1,5 +1,6 @@
-interface Env {
+export interface Env {
   REQUESTS: KVNamespace;
+  AI: Ai;
   APNS_PRIVATE_KEY: string;
   APNS_KEY_ID: string;
   APNS_TEAM_ID: string;
@@ -118,6 +119,51 @@ async function parseJSON<T>(request: Request): Promise<T | null> {
 }
 
 // --- Routes ---
+
+// --- LLM Shortener ---
+
+const AI_TIMEOUT_MS = 3000;
+
+export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
+  try {
+    const result = await Promise.race([
+      env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
+        messages: [
+          {
+            role: "system",
+            content: `You are a notification message shortener for Apple Watch. Translate and shorten the given message into concise Japanese (端的で簡潔な日本語). Keep it under ${maxChars} characters. Preserve the core meaning. Return ONLY the Japanese text, no quotes, no explanation, no markdown.`,
+          },
+          {
+            role: "user",
+            content: text,
+          },
+        ],
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("AI timeout")), AI_TIMEOUT_MS),
+      ),
+    ]);
+    const output = (result as { response?: string }).response;
+    if (typeof output === "string" && output.trim().length > 0) {
+      return output.trim().slice(0, maxChars);
+    }
+    if (typeof output === "string") {
+      console.error("LLM shortener: empty response from AI");
+    } else {
+      console.error("LLM shortener: unexpected response shape", {
+        outputType: typeof output,
+      });
+    }
+    return text;
+  } catch (e) {
+    console.error("LLM shortener failed:", {
+      error: String(e),
+      maxChars,
+      textLength: text.length,
+    });
+    return text;
+  }
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -301,11 +347,19 @@ export default {
         if (!deviceToken) {
           return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
         }
+        // Apple Watch has very limited display space; shorten long bodies
+        // via Workers AI. If the LLM call fails, the original text passes
+        // through unchanged.
+        const WATCH_BODY_MAX_CHARS = 100;
+        let message = body.message || "";
+        if (message.length > WATCH_BODY_MAX_CHARS) {
+          message = await shortenWithLLM(env, message, WATCH_BODY_MAX_CHARS);
+        }
         const payload: Record<string, unknown> = {
           aps: {
             alert: {
               title: body.title || "Pager",
-              body: body.message || "",
+              body: message,
             },
             sound: "default",
             "interruption-level": "time-sensitive",
