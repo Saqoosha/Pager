@@ -6,7 +6,7 @@
 - Installed app display name: **Pager**
 - Main bundle ID: `sh.saqoo.pager-app`
 - Notification Service Extension bundle ID: `sh.saqoo.pager-app.NotificationService`
-- Team ID: `G5G54TCH8W`
+- Team ID: `VCFY2GFR89`
 - SKU: `sh.saqoo.pager-app`
 
 The App Store Connect app record must exist before upload. If an
@@ -73,7 +73,7 @@ plutil -create xml1 "$EXPORT_PLIST"
 plutil -insert method -string app-store-connect "$EXPORT_PLIST"
 plutil -insert destination -string upload "$EXPORT_PLIST"
 plutil -insert signingStyle -string automatic "$EXPORT_PLIST"
-plutil -insert teamID -string G5G54TCH8W "$EXPORT_PLIST"
+plutil -insert teamID -string VCFY2GFR89 "$EXPORT_PLIST"
 plutil -insert uploadSymbols -bool YES "$EXPORT_PLIST"
 plutil -insert stripSwiftSymbols -bool YES "$EXPORT_PLIST"
 plutil -insert manageAppVersionAndBuildNumber -bool NO "$EXPORT_PLIST"
@@ -96,15 +96,17 @@ under TestFlight.
 ## APNs Environment
 
 Development installs from Xcode use sandbox APNs tokens. TestFlight and App
-Store builds use production APNs tokens. Before testing a TestFlight build,
-deploy the Worker with:
+Store builds use production APNs tokens. The Worker supports per-request sandbox
+control via a `sandbox` boolean in the POST body. Hooks read `PAGER_SANDBOX`
+env var (default `false`) and include it automatically.
 
-```toml
-APNS_USE_SANDBOX = "false"
+For local development (sandbox APNs):
+```bash
+export PAGER_SANDBOX=true
 ```
 
-Switch it back to `"true"` for local development builds if the same Worker is
-used for device installs from Xcode.
+For TestFlight / App Store (production APNs), leave `PAGER_SANDBOX` unset.
+The Worker's `APNS_USE_SANDBOX` var serves as a fallback default.
 
 ## After Upload
 

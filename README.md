@@ -138,7 +138,7 @@ workflow. Important distribution facts:
 
 - Main app bundle ID: `sh.saqoo.pager-app`
 - Notification Service Extension bundle ID: `sh.saqoo.pager-app.NotificationService`
-- App Store Connect team: `G5G54TCH8W`
+- App Store Connect team: `VCFY2GFR89`
 - TestFlight builds use production APNs, so the deployed Worker must set
   `APNS_USE_SANDBOX = "false"` before testing push notifications from
   TestFlight.

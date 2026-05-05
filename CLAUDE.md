@@ -108,7 +108,7 @@ used version `1.0.0`, build `202605011954`.
 
 If the local files are lost, restore from 1Password:
 
-- `Pager — APNs Auth Key (SRH3669YH6)` — the `.p8` file (`op document get 'Pager — APNs Auth Key (SRH3669YH6)' --vault=Personal > credentials/AuthKey_SRH3669YH6.p8`)
+- `Pager — APNs Auth Key (SRH3669YH6)` — the `.p8` file (`op read 'op://Personal/Pager — APNs Auth Key (SRH3669YH6)/AuthKey_SRH3669YH6.p8' > credentials/AuthKey_SRH3669YH6.p8`)
 - `Pager — Cloudflare & APNs Config` — Secure Note with account_id, KV namespace id, Key IDs, Team ID, Bundle IDs, App Group
 - Development team: `VCFY2GFR89` (personal); Cloudflare account: `c21a10f70a8036d2ad10687ab83bfb4b` (Whatever Co.)
 - `Pager` — `username` field = Worker URL, `password` field = `SHARED_SECRET` (for `PAGER_SECRET` env var)
