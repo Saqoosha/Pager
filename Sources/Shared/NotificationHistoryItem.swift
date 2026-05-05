@@ -55,14 +55,4 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         return body
     }
 
-    /// Render the body as markdown via `AttributedString`. Falls back to plain
-    /// text when parsing fails so the user always sees something.
-    static func markdownBody(_ body: String) -> AttributedString {
-        let cleaned = displayableBody(body)
-        guard !cleaned.isEmpty else { return AttributedString("") }
-        if let attr = try? AttributedString(markdown: cleaned) {
-            return attr
-        }
-        return AttributedString(cleaned)
-    }
 }

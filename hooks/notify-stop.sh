@@ -70,7 +70,7 @@ INPUT=$(cat)
 # Minimal markdown-aware cleanup: collapse excessive blank lines and trim
 # trailing whitespace on each line, but preserve the markdown structure
 # (newlines, bold, italic, code, links, headers, lists) so the iOS app
-# can render it with AttributedString.
+# can render it with MarkdownUI.
 clean_text() {
   sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' \
     | sed -E '/^[[:space:]]*$/d' \
