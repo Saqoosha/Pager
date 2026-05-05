@@ -1,6 +1,6 @@
 export interface Env {
   REQUESTS: KVNamespace;
-  AI: Ai;
+  ANTHROPIC_API_KEY: string;
   APNS_PRIVATE_KEY: string;
   APNS_KEY_ID: string;
   APNS_TEAM_ID: string;
@@ -126,34 +126,34 @@ const AI_TIMEOUT_MS = 3000;
 
 export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
   try {
-    const result = await Promise.race([
-      env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
-        messages: [
-          {
-            role: "system",
-            content: `You are a notification message shortener for Apple Watch. Translate and shorten the given message into concise Japanese (端的で簡潔な日本語). Keep it under ${maxChars} characters. Preserve the core meaning. Return ONLY the Japanese text, no quotes, no explanation, no markdown.`,
-          },
-          {
-            role: "user",
-            content: text,
-          },
-        ],
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 128,
+        system: `You are a notification shortener for Apple Watch. Translate and shorten the given message into concise Japanese (端的で簡潔な日本語). Preserve the core meaning. Return ONLY the Japanese text, under ${maxChars} characters. No quotes, no explanation, no markdown.`,
+        messages: [{ role: "user", content: text }],
       }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("AI timeout")), AI_TIMEOUT_MS),
-      ),
-    ]);
-    const output = (result as { response?: string }).response;
-    if (typeof output === "string" && output.trim().length > 0) {
-      return output.trim().slice(0, maxChars);
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      console.error("LLM shortener: Anthropic API error", response.status);
+      return text;
     }
-    if (typeof output === "string") {
-      console.error("LLM shortener: empty response from AI");
-    } else {
-      console.error("LLM shortener: unexpected response shape", {
-        outputType: typeof output,
-      });
+    const data = (await response.json()) as { content?: { type: string; text: string }[] };
+    const output = data.content?.[0]?.text?.trim();
+    if (output && output.length > 0) {
+      return output.slice(0, maxChars);
     }
+    console.error("LLM shortener: empty response from Anthropic");
     return text;
   } catch (e) {
     console.error("LLM shortener failed:", {
@@ -348,8 +348,8 @@ export default {
           return new Response(JSON.stringify({ error: "no device registered" }), { status: 503, headers: corsHeaders });
         }
         // Apple Watch has very limited display space; shorten long bodies
-        // via Workers AI. If the LLM call fails, the original text passes
-        // through unchanged.
+        // via Anthropic API (Haiku). If the LLM call fails, the original
+        // text passes through unchanged.
         const WATCH_BODY_MAX_CHARS = 100;
         let message = body.message || "";
         if (message.length > WATCH_BODY_MAX_CHARS) {
