@@ -125,10 +125,45 @@ async function parseJSON<T>(request: Request): Promise<T | null> {
 
 const AI_TIMEOUT_MS = 3000;
 
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/~~([^~\n]+)~~/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*([^*\n]+?)\*\*/g, "$1")
+    .replace(/(?<![\w])__([^_\n]*?\s[^_\n]*?)__(?![\w])/g, "$1")
+    .replace(/(?<![\w*])\*([^*\n]+?)\*(?![\w*])/g, "$1")
+    .replace(/(?<![\w_])_([^_\n]+?)_(?![\w_])/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s*>+\s?/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/^\s*[-=*_]{3,}\s*$/gm, "")
+    .replace(/^\s*\|?\s*[:\- |]+\s*\|?\s*$/gm, "")
+    .replace(/\|/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function safeSlice(text: string, maxChars: number): string {
+  return Array.from(text).slice(0, maxChars).join("");
+}
+
+function fallbackBanner(text: string, maxChars: number): string {
+  const stripped = stripMarkdown(text);
+  return safeSlice(stripped.length > 0 ? stripped : text, maxChars);
+}
+
 export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, AI_TIMEOUT_MS);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -139,30 +174,58 @@ export async function shortenWithLLM(env: Env, text: string, maxChars: number): 
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 128,
-        system: `You are a notification shortener for Apple Watch. Translate and shorten the given message into concise Japanese (端的で簡潔な日本語). Preserve the core meaning. Return ONLY the Japanese text, under ${maxChars} characters. No quotes, no explanation, no markdown.`,
+        system: [
+          "Compress the message into ONE short line for an Apple Watch lock-screen banner.",
+          "Rules:",
+          `- Output Japanese, plain text, ONE line, as short as possible (hard cap: ${maxChars} chars).`,
+          "- Strictly NO markdown. Forbidden: # * _ ` ~ > | and list/table/heading syntax.",
+          "- Capture only the single most important fact. Drop summaries, bullets, code, sections.",
+          "- Emoji ONLY as REPLACEMENT for words to save characters, never as decoration.",
+          "  Good: ✅ビルド  ❌テスト失敗  ⚠️警告3件  🚀デプロイ完了",
+          "  Bad: ビルド成功 ✅  完了 🎉  デプロイ完了 🚀  (emoji adds nothing)",
+          "  Rule: if removing the emoji loses no information, DROP IT. If removing the word next to it loses no information, drop the WORD instead and keep the emoji.",
+          "- Prefer no emoji over decorative emoji.",
+          "- Return ONLY the result line. No quotes, no labels, no explanation.",
+        ].join("\n"),
         messages: [{ role: "user", content: text }],
       }),
       signal: controller.signal,
     });
-    clearTimeout(timeout);
+    const requestId = response.headers.get("anthropic-request-id") ?? response.headers.get("request-id");
     if (!response.ok) {
-      console.error("LLM shortener: Anthropic API error", response.status);
-      return text;
+      console.error("LLM shortener: Anthropic API error", { status: response.status, requestId });
+      return fallbackBanner(text, maxChars);
     }
-    const data = (await response.json()) as { content?: { type: string; text: string }[] };
-    const output = data.content?.[0]?.text?.trim();
-    if (output && output.length > 0) {
-      return output.slice(0, maxChars);
+    const data = (await response.json()) as {
+      type?: string;
+      content?: { type: string; text: string }[];
+      error?: unknown;
+    };
+    if (data.type === "error") {
+      console.error("LLM shortener: Anthropic returned error type", { error: data.error, requestId });
+      return fallbackBanner(text, maxChars);
     }
-    console.error("LLM shortener: empty response from Anthropic");
-    return text;
+    const raw = data.content?.[0]?.text?.trim();
+    if (raw && raw.length > 0) {
+      const stripped = stripMarkdown(raw);
+      if (stripped.length > 0) {
+        return safeSlice(stripped, maxChars);
+      }
+      console.error("LLM shortener: stripped output empty, using original", { requestId });
+      return fallbackBanner(text, maxChars);
+    }
+    console.error("LLM shortener: empty or unexpected response", { data, requestId });
+    return fallbackBanner(text, maxChars);
   } catch (e) {
     console.error("LLM shortener failed:", {
       error: String(e),
+      timedOut,
       maxChars,
       textLength: text.length,
     });
-    return text;
+    return fallbackBanner(text, maxChars);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
