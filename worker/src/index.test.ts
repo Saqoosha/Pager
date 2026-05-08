@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { shortenWithLLM, type Env } from "./index";
+import { shortenWithLLM, stripMarkdown, type Env } from "./index";
 
 function mockEnv(): Env {
   return {
@@ -73,5 +73,52 @@ describe("shortenWithLLM", () => {
     globalThis.fetch = mockFetch("あ".repeat(200));
     const result = await shortenWithLLM(mockEnv(), "original long text", 100);
     expect(result.length).toBeLessThanOrEqual(100);
+  });
+
+  it("strips markdown from LLM output", async () => {
+    globalThis.fetch = mockFetch("**ビルド成功** ✅\n\n- テスト全通過\n- `lint` OK");
+    const result = await shortenWithLLM(mockEnv(), "long message", 100);
+    expect(result).not.toMatch(/[*`#|>]/);
+    expect(result).toContain("ビルド成功");
+    expect(result).toContain("✅");
+  });
+
+  it("strips markdown in fallback path on error", async () => {
+    globalThis.fetch = mockFetch(null, 500);
+    const result = await shortenWithLLM(mockEnv(), "**bold** message", 100);
+    expect(result).toBe("bold message");
+  });
+});
+
+describe("stripMarkdown", () => {
+  it("removes bold and italic markers but keeps content", () => {
+    expect(stripMarkdown("**bold** and *italic* and __also__ and _again_")).toBe(
+      "bold and italic and also and again",
+    );
+  });
+
+  it("removes headers", () => {
+    expect(stripMarkdown("# Title\n## Sub\n### Deep")).toBe("Title Sub Deep");
+  });
+
+  it("strips inline and fenced code", () => {
+    expect(stripMarkdown("Use `npm test` to run")).toBe("Use npm test to run");
+    expect(stripMarkdown("Result:\n```\nfoo\nbar\n```\nDone")).toBe("Result: Done");
+  });
+
+  it("removes list markers", () => {
+    expect(stripMarkdown("- one\n- two\n* three\n1. four")).toBe("one two three four");
+  });
+
+  it("collapses tables", () => {
+    expect(stripMarkdown("| Tool | Status |\n|---|---|\n| build | ok |")).toBe("Tool Status build ok");
+  });
+
+  it("keeps link text but drops URL", () => {
+    expect(stripMarkdown("see [docs](https://example.com) for more")).toBe("see docs for more");
+  });
+
+  it("keeps emoji intact", () => {
+    expect(stripMarkdown("**Done** ✅🎉")).toBe("Done ✅🎉");
   });
 });
