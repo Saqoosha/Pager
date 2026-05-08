@@ -129,12 +129,13 @@ export function stripMarkdown(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`([^`]+)`/g, "$1")
+    .replace(/~~([^~\n]+)~~/g, "$1")
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2")
-    .replace(/(^|[^_])_([^_\n]+)_/g, "$1$2")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*([^*\n]+?)\*\*/g, "$1")
+    .replace(/(?<![\w])__([^_\n]*?\s[^_\n]*?)__(?![\w])/g, "$1")
+    .replace(/(?<![\w*])\*([^*\n]+?)\*(?![\w*])/g, "$1")
+    .replace(/(?<![\w_])_([^_\n]+?)_(?![\w_])/g, "$1")
     .replace(/^\s{0,3}#{1,6}\s+/gm, "")
     .replace(/^\s*>+\s?/gm, "")
     .replace(/^\s*[-*+]\s+/gm, "")
@@ -146,10 +147,23 @@ export function stripMarkdown(text: string): string {
     .trim();
 }
 
+function safeSlice(text: string, maxChars: number): string {
+  return Array.from(text).slice(0, maxChars).join("");
+}
+
+function fallbackBanner(text: string, maxChars: number): string {
+  const stripped = stripMarkdown(text);
+  return safeSlice(stripped.length > 0 ? stripped : text, maxChars);
+}
+
 export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, AI_TIMEOUT_MS);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -177,25 +191,41 @@ export async function shortenWithLLM(env: Env, text: string, maxChars: number): 
       }),
       signal: controller.signal,
     });
-    clearTimeout(timeout);
+    const requestId = response.headers.get("anthropic-request-id") ?? response.headers.get("request-id");
     if (!response.ok) {
-      console.error("LLM shortener: Anthropic API error", response.status);
-      return stripMarkdown(text).slice(0, maxChars);
+      console.error("LLM shortener: Anthropic API error", { status: response.status, requestId });
+      return fallbackBanner(text, maxChars);
     }
-    const data = (await response.json()) as { content?: { type: string; text: string }[] };
+    const data = (await response.json()) as {
+      type?: string;
+      content?: { type: string; text: string }[];
+      error?: unknown;
+    };
+    if (data.type === "error") {
+      console.error("LLM shortener: Anthropic returned error type", { error: data.error, requestId });
+      return fallbackBanner(text, maxChars);
+    }
     const raw = data.content?.[0]?.text?.trim();
     if (raw && raw.length > 0) {
-      return stripMarkdown(raw).slice(0, maxChars);
+      const stripped = stripMarkdown(raw);
+      if (stripped.length > 0) {
+        return safeSlice(stripped, maxChars);
+      }
+      console.error("LLM shortener: stripped output empty, using original", { requestId });
+      return fallbackBanner(text, maxChars);
     }
-    console.error("LLM shortener: empty response from Anthropic");
-    return stripMarkdown(text).slice(0, maxChars);
+    console.error("LLM shortener: empty or unexpected response", { data, requestId });
+    return fallbackBanner(text, maxChars);
   } catch (e) {
     console.error("LLM shortener failed:", {
       error: String(e),
+      timedOut,
       maxChars,
       textLength: text.length,
     });
-    return stripMarkdown(text).slice(0, maxChars);
+    return fallbackBanner(text, maxChars);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
