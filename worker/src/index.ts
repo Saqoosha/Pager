@@ -180,6 +180,8 @@ export async function shortenWithLLM(env: Env, text: string, maxChars: number): 
           `- Output Japanese, plain text, ONE line, as short as possible (hard cap: ${maxChars} chars).`,
           "- Strictly NO markdown. Forbidden: # * _ ` ~ > | and list/table/heading syntax.",
           "- Capture only the single most important fact. Drop summaries, bullets, code, sections.",
+          "- NEVER flip polarity. Preserve failure/error/denial/negation exactly. Success must stay success, failure must stay failure, allow must stay allow, deny must stay deny. If unsure, keep the original wording over a shorter rewrite.",
+          "- Negative facts (失敗/エラー/拒否/未完了/警告/中断) MUST appear in the output. Do not summarize them away even if other content seems more important.",
           "- Emoji ONLY as REPLACEMENT for words to save characters, never as decoration.",
           "  Good: ✅ビルド  ❌テスト失敗  ⚠️警告3件  🚀デプロイ完了",
           "  Bad: ビルド成功 ✅  完了 🎉  デプロイ完了 🚀  (emoji adds nothing)",
@@ -209,9 +211,18 @@ export async function shortenWithLLM(env: Env, text: string, maxChars: number): 
     if (raw && raw.length > 0) {
       const stripped = stripMarkdown(raw);
       if (stripped.length > 0) {
-        return safeSlice(stripped, maxChars);
+        const output = safeSlice(stripped, maxChars);
+        console.log("LLM shortener: success", {
+          requestId,
+          maxChars,
+          inputLength: text.length,
+          outputLength: output.length,
+          input: text,
+          output,
+        });
+        return output;
       }
-      console.error("LLM shortener: stripped output empty, using original", { requestId });
+      console.error("LLM shortener: stripped output empty, using original", { requestId, raw, input: text });
       return fallbackBanner(text, maxChars);
     }
     console.error("LLM shortener: empty or unexpected response", { data, requestId });
