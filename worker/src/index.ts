@@ -60,9 +60,13 @@ async function generateAPNsJWT(env: Env): Promise<string> {
   return `${unsigned}.${base64url(signature)}`;
 }
 
-async function sendPush(env: Env, deviceToken: string, payload: object, useSandbox?: boolean): Promise<Response> {
+async function sendPushDirect(
+  env: Env,
+  deviceToken: string,
+  payload: object,
+  sandbox: boolean,
+): Promise<Response> {
   const jwt = await generateAPNsJWT(env);
-  const sandbox = useSandbox ?? env.APNS_USE_SANDBOX === "true";
   const apnsHost = sandbox ? "api.sandbox.push.apple.com" : "api.push.apple.com";
   return fetch(`https://${apnsHost}/3/device/${deviceToken}`, {
     method: "POST",
@@ -76,6 +80,85 @@ async function sendPush(env: Env, deviceToken: string, payload: object, useSandb
     },
     body: JSON.stringify(payload),
   });
+}
+
+// Token-to-environment cache lives in KV so the worker doesn't re-probe APNs
+// every push. Reads/writes are best-effort: a stale or missing cache only
+// costs one extra round-trip via the BadDeviceToken retry path.
+function apnsEnvCacheKey(deviceToken: string): string {
+  return `apns_env:${deviceToken}`;
+}
+
+async function readCachedApnsEnv(env: Env, deviceToken: string): Promise<boolean | null> {
+  const cached = await env.REQUESTS.get(apnsEnvCacheKey(deviceToken));
+  if (cached === "sandbox") return true;
+  if (cached === "production") return false;
+  return null;
+}
+
+async function writeCachedApnsEnv(env: Env, deviceToken: string, sandbox: boolean): Promise<void> {
+  try {
+    await env.REQUESTS.put(apnsEnvCacheKey(deviceToken), sandbox ? "sandbox" : "production");
+  } catch (e) {
+    console.error("APNs env cache write failed:", { error: String(e) });
+  }
+}
+
+/**
+ * Send a push, auto-detecting APNs sandbox vs production when `useSandbox` is
+ * not supplied. The first attempt uses the per-token cached environment (or
+ * `APNS_USE_SANDBOX` as the seed when nothing is cached). On a `BadDeviceToken`
+ * 400 — the canonical APNs "wrong environment" signal — we retry against the
+ * opposite host and update the cache.
+ *
+ * If the caller passes `useSandbox` explicitly, that value is honored as-is
+ * with no retry (preserves legacy /notify and /request behaviour where the
+ * hook already knows which environment to target).
+ */
+export async function sendPush(
+  env: Env,
+  deviceToken: string,
+  payload: object,
+  useSandbox?: boolean,
+): Promise<Response> {
+  // typeof check (rather than `!== undefined`) so a JSON `null` from a
+  // misconfigured client falls through to auto-detect instead of being treated
+  // as "production".
+  if (typeof useSandbox === "boolean") {
+    return sendPushDirect(env, deviceToken, payload, useSandbox);
+  }
+
+  const cached = await readCachedApnsEnv(env, deviceToken);
+  const firstTrySandbox = cached ?? (env.APNS_USE_SANDBOX === "true");
+
+  const first = await sendPushDirect(env, deviceToken, payload, firstTrySandbox);
+  if (first.ok) {
+    if (cached !== firstTrySandbox) {
+      await writeCachedApnsEnv(env, deviceToken, firstTrySandbox);
+    }
+    return first;
+  }
+
+  if (first.status === 400) {
+    // Peek at the response body to see if APNs flagged the wrong environment.
+    // Use `.clone()` so the original response body stays readable by the caller.
+    let reason: string | undefined;
+    try {
+      const parsed = (await first.clone().json()) as { reason?: string };
+      reason = parsed.reason;
+    } catch {
+      // Fall through: non-JSON 400s aren't environment-mismatch errors.
+    }
+    if (reason === "BadDeviceToken") {
+      const retry = await sendPushDirect(env, deviceToken, payload, !firstTrySandbox);
+      if (retry.ok) {
+        await writeCachedApnsEnv(env, deviceToken, !firstTrySandbox);
+      }
+      return retry;
+    }
+  }
+
+  return first;
 }
 
 // --- Auth (timing-safe comparison) ---
