@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { shortenWithLLM, stripMarkdown, hasNegativePolarity, sendPush, type Env } from "./index";
+import { shortenWithLLM, stripMarkdown, sendPush, type Env } from "./index";
 
 function mockEnv(): Env {
   return {
@@ -172,54 +172,6 @@ describe("shortenWithLLM", () => {
     globalThis.fetch = mockFetch("```\nonly fenced code\n```");
     const result = await shortenWithLLM(mockEnv(), "Original message survives", 100);
     expect(result).toBe("Original message survives");
-  });
-
-  it("falls back to original when LLM drops negative polarity (input negative → output positive)", async () => {
-    globalThis.fetch = mockFetch("✅ビルド完了");
-    const input = "Tests failed: 3 of 12 cases broken";
-    const result = await shortenWithLLM(mockEnv(), input, 100);
-    expect(result).toBe(input);
-  });
-
-  it("allows positive input → positive output (no false fallback)", async () => {
-    globalThis.fetch = mockFetch("ビルド完了");
-    const result = await shortenWithLLM(mockEnv(), "Build succeeded after 42 seconds", 100);
-    expect(result).toBe("ビルド完了");
-  });
-
-  it("allows negative input → negative output (polarity preserved)", async () => {
-    globalThis.fetch = mockFetch("❌テスト失敗");
-    const result = await shortenWithLLM(mockEnv(), "Tests failed: 3 broken", 100);
-    expect(result).toBe("❌テスト失敗");
-  });
-});
-
-describe("hasNegativePolarity", () => {
-  it("detects Japanese failure tokens", () => {
-    expect(hasNegativePolarity("テスト失敗")).toBe(true);
-    expect(hasNegativePolarity("エラー発生")).toBe(true);
-    expect(hasNegativePolarity("リクエスト拒否")).toBe(true);
-    expect(hasNegativePolarity("ビルド中断")).toBe(true);
-    expect(hasNegativePolarity("警告3件")).toBe(true);
-  });
-
-  it("detects English failure tokens", () => {
-    expect(hasNegativePolarity("Tests failed")).toBe(true);
-    expect(hasNegativePolarity("Build failure")).toBe(true);
-    expect(hasNegativePolarity("API error")).toBe(true);
-    expect(hasNegativePolarity("request denied")).toBe(true);
-    expect(hasNegativePolarity("Operation aborted")).toBe(true);
-  });
-
-  it("detects negative emojis", () => {
-    expect(hasNegativePolarity("❌ broken")).toBe(true);
-    expect(hasNegativePolarity("🚫 blocked")).toBe(true);
-  });
-
-  it("returns false for purely positive messages", () => {
-    expect(hasNegativePolarity("Build succeeded")).toBe(false);
-    expect(hasNegativePolarity("ビルド完了")).toBe(false);
-    expect(hasNegativePolarity("All tests passing")).toBe(false);
   });
 });
 

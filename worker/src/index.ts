@@ -314,13 +314,6 @@ function fallbackBanner(text: string, maxChars: number): string {
   return safeSlice(stripped.length > 0 ? stripped : text, maxChars);
 }
 
-const NEGATIVE_POLARITY_REGEX =
-  /失敗|エラー|拒否|否認|未完了|中断|警告|denied|deny|fail(ed|ure|s)?|reject(ed|ion|s)?|abort(ed|s)?|error|❌|🚫/i;
-
-export function hasNegativePolarity(text: string): boolean {
-  return NEGATIVE_POLARITY_REGEX.test(text);
-}
-
 export async function shortenWithLLM(env: Env, text: string, maxChars: number): Promise<string> {
   const controller = new AbortController();
   let timedOut = false;
@@ -391,14 +384,6 @@ export async function shortenWithLLM(env: Env, text: string, maxChars: number): 
       return fallbackBanner(text, maxChars);
     }
     const output = safeSlice(stripped, maxChars);
-    if (hasNegativePolarity(text) && !hasNegativePolarity(output)) {
-      console.error("LLM shortener: polarity flip suspected, using fallback", {
-        requestId,
-        input: text,
-        output,
-      });
-      return fallbackBanner(text, maxChars);
-    }
     console.log("LLM shortener: success", {
       requestId,
       maxChars,
