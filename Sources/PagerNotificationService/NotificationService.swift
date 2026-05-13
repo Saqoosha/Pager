@@ -17,13 +17,25 @@ final class NotificationService: UNNotificationServiceExtension {
         // so the main app's tap-to-history lookup works for both push types.
         let historyId = (userInfo["requestId"] as? String) ?? UUID().uuidString
 
+        // Capture before bestAttempt is mutated downstream; this line must
+        // stay above any best.body assignment.
         let shortBody = request.content.body
-        let fullBody = (userInfo["toolInputFull"] as? String)
-            ?? (userInfo["messageFull"] as? String)
-            ?? shortBody
-        // Only persist bodyShort when it actually differs — saves bytes for
-        // /request pushes and short notifies where the LLM didn't compress.
-        let bodyShort: String? = shortBody == fullBody ? nil : shortBody
+        let toolInputFull = userInfo["toolInputFull"] as? String
+        let messageFull = userInfo["messageFull"] as? String
+        let fullBody = toolInputFull ?? messageFull ?? shortBody
+        // bodyShort holds the LLM-shortened summary, which the worker
+        // generates only for /notify pushes over WATCH_BODY_MAX_CHARS.
+        // Suppress it for:
+        //   - /request pushes (banner is a head-truncation preview, not a summary)
+        //   - short /notify, /test, and missing-userInfo fallbacks (banner == body)
+        // Trim before comparing so a worker-side trailing newline doesn't make
+        // us persist a duplicate.
+        let bodyShort: String? = {
+            if toolInputFull != nil { return nil }
+            let trimmedShort = shortBody.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedFull = fullBody.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmedShort == trimmedFull ? nil : shortBody
+        }()
         let rawSource = (userInfo["source"] as? String) ?? ""
 
         let item = NotificationHistoryItem(
