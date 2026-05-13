@@ -17,9 +17,13 @@ final class NotificationService: UNNotificationServiceExtension {
         // so the main app's tap-to-history lookup works for both push types.
         let historyId = (userInfo["requestId"] as? String) ?? UUID().uuidString
 
+        let shortBody = request.content.body
         let fullBody = (userInfo["toolInputFull"] as? String)
             ?? (userInfo["messageFull"] as? String)
-            ?? request.content.body
+            ?? shortBody
+        // Only persist bodyShort when it actually differs — saves bytes for
+        // /request pushes and short notifies where the LLM didn't compress.
+        let bodyShort: String? = shortBody == fullBody ? nil : shortBody
         let rawSource = (userInfo["source"] as? String) ?? ""
 
         let item = NotificationHistoryItem(
@@ -27,6 +31,7 @@ final class NotificationService: UNNotificationServiceExtension {
             receivedAt: Date(),
             title: request.content.title,
             body: fullBody,
+            bodyShort: bodyShort,
             category: request.content.categoryIdentifier.isEmpty ? nil : request.content.categoryIdentifier,
             project: userInfo["project"] as? String,
             toolName: userInfo["toolName"] as? String,

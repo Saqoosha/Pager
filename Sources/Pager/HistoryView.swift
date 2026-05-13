@@ -93,7 +93,7 @@ private struct HistoryRow: View {
                 Text(item.title)
                     .font(.subheadline.bold())
                     .lineLimit(2)
-                Text(NotificationHistoryItem.displayableBody(item.body))
+                Text(NotificationHistoryItem.displayableBody(item.bodyShort ?? item.body))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)

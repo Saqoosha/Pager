@@ -8,9 +8,14 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let receivedAt: Date
     let title: String
-    /// Full body. For `/request`, taken from the custom `toolInputFull`
-    /// key. For `/notify`, taken from `aps.alert.body`.
+    /// Full body. For `/request`, taken from `toolInputFull`. For `/notify`,
+    /// taken from `messageFull` (the original pre-LLM message). Used by the
+    /// detail view.
     let body: String
+    /// LLM-shortened version of the body — the same text shown on the Apple
+    /// Watch / lock-screen banner. Used by the list view. `nil` for legacy
+    /// items and for pushes where the short and full bodies are identical.
+    let bodyShort: String?
     let category: String?
     let project: String?
     let toolName: String?
@@ -27,6 +32,7 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         receivedAt: Date,
         title: String,
         body: String,
+        bodyShort: String? = nil,
         category: String? = nil,
         project: String? = nil,
         toolName: String? = nil,
@@ -39,6 +45,7 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         self.receivedAt = receivedAt
         self.title = title
         self.body = body
+        self.bodyShort = bodyShort
         self.category = category
         self.project = project
         self.toolName = toolName
