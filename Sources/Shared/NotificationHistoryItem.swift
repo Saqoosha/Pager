@@ -8,9 +8,18 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let receivedAt: Date
     let title: String
-    /// Full body. For `/request`, taken from the custom `toolInputFull`
-    /// key. For `/notify`, taken from `aps.alert.body`.
+    /// Full body. The NSE fills it from `toolInputFull` (for `/request`) or
+    /// `messageFull` (for `/notify`), falling back to the APNs banner body
+    /// (`aps.alert.body`) when neither custom key is present (e.g. `/test`
+    /// pushes). Rendered by the detail view with MarkdownUI.
     let body: String
+    /// LLM-shortened summary of `body`, produced by the worker's
+    /// `shortenWithLLM` for long `/notify` pushes (see `worker/src/index.ts`).
+    /// Used by the list view; falls back to `body` when `nil`. `nil` for:
+    ///   - `/request` pushes (the banner is a head-truncation, not a summary)
+    ///   - short `/notify`, `/test`, and any push where the banner equals `body`
+    ///   - legacy items written before this field existed.
+    let bodyShort: String?
     let category: String?
     let project: String?
     let toolName: String?
@@ -27,6 +36,7 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         receivedAt: Date,
         title: String,
         body: String,
+        bodyShort: String? = nil,
         category: String? = nil,
         project: String? = nil,
         toolName: String? = nil,
@@ -39,6 +49,7 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
         self.receivedAt = receivedAt
         self.title = title
         self.body = body
+        self.bodyShort = bodyShort
         self.category = category
         self.project = project
         self.toolName = toolName
@@ -53,6 +64,13 @@ struct NotificationHistoryItem: Codable, Identifiable, Hashable, Sendable {
     static func displayableBody(_ body: String) -> String {
         if body == "null" { return "" }
         return body
+    }
+
+    /// Single source of truth for "what the History list row should show":
+    /// the worker-generated short summary if it exists, else the full body.
+    /// Already `null`-cleaned so the row can render it directly.
+    var listDisplayBody: String {
+        Self.displayableBody(bodyShort ?? body)
     }
 
 }
