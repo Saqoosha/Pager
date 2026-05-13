@@ -83,33 +83,81 @@ async function sendPushDirect(
 }
 
 // Token-to-environment cache lives in KV so the worker doesn't re-probe APNs
-// every push. Reads/writes are best-effort: a stale or missing cache only
-// costs one extra round-trip via the BadDeviceToken retry path.
+// every push. Both reads and writes are best-effort: a stale, missing, or
+// unreachable cache only costs one extra round-trip via the BadDeviceToken
+// retry path, so KV failures must never break the push itself.
 function apnsEnvCacheKey(deviceToken: string): string {
   return `apns_env:${deviceToken}`;
 }
 
+// Don't echo full device tokens into log lines — they're not PII in the strict
+// sense, but logging the full token everywhere makes targeted-push abuse easier
+// if Cloudflare logs ever leak.
+function maskDeviceToken(deviceToken: string): string {
+  return deviceToken.length <= 8 ? deviceToken : `${deviceToken.slice(0, 8)}…`;
+}
+
+// Devices typically only rotate their APNs token on reinstall, but a token
+// that never receives another push would otherwise stay in KV forever. Expire
+// the cache entry after 30 days so dormant tokens get garbage-collected.
+const APNS_ENV_CACHE_TTL_SECONDS = 60 * 60 * 24 * 30;
+
+// 400 reasons that mean "the token is for the other APNs environment". The
+// canonical one is `BadDeviceToken`; `DeviceTokenNotForTopic` is also observed
+// in env-mismatch cases on some APNs configurations, so include it too. Other
+// 400 reasons (e.g. `MissingDeviceToken`, `BadCertificate`) are NOT environment
+// problems and must not trigger the auto-detect flip.
+const RETRYABLE_400_REASONS: ReadonlySet<string> = new Set([
+  "BadDeviceToken",
+  "DeviceTokenNotForTopic",
+]);
+
 async function readCachedApnsEnv(env: Env, deviceToken: string): Promise<boolean | null> {
-  const cached = await env.REQUESTS.get(apnsEnvCacheKey(deviceToken));
-  if (cached === "sandbox") return true;
-  if (cached === "production") return false;
-  return null;
+  try {
+    const cached = await env.REQUESTS.get(apnsEnvCacheKey(deviceToken));
+    if (cached === "sandbox") return true;
+    if (cached === "production") return false;
+    return null;
+  } catch (e) {
+    // Treat the cache as a miss on read failure. Auto-detect will pick the
+    // seed env and the BadDeviceToken retry path still produces the correct
+    // result — just one extra round-trip for this push.
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("APNs env cache read failed", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      deviceToken: maskDeviceToken(deviceToken),
+    });
+    return null;
+  }
 }
 
 async function writeCachedApnsEnv(env: Env, deviceToken: string, sandbox: boolean): Promise<void> {
   try {
-    await env.REQUESTS.put(apnsEnvCacheKey(deviceToken), sandbox ? "sandbox" : "production");
+    await env.REQUESTS.put(
+      apnsEnvCacheKey(deviceToken),
+      sandbox ? "sandbox" : "production",
+      { expirationTtl: APNS_ENV_CACHE_TTL_SECONDS },
+    );
   } catch (e) {
-    console.error("APNs env cache write failed:", { error: String(e) });
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("APNs env cache write failed", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      deviceToken: maskDeviceToken(deviceToken),
+      sandbox,
+    });
   }
 }
 
 /**
  * Send a push, auto-detecting APNs sandbox vs production when `useSandbox` is
  * not supplied. The first attempt uses the per-token cached environment (or
- * `APNS_USE_SANDBOX` as the seed when nothing is cached). On a `BadDeviceToken`
- * 400 — the canonical APNs "wrong environment" signal — we retry against the
- * opposite host and update the cache.
+ * `APNS_USE_SANDBOX` as the seed when nothing is cached). On a 400 whose
+ * `reason` is in `RETRYABLE_400_REASONS` — the APNs "wrong environment"
+ * signals — we retry against the opposite host and update the cache.
  *
  * If the caller passes `useSandbox` explicitly, that value is honored as-is
  * with no retry (preserves legacy /notify and /request behaviour where the
@@ -143,19 +191,46 @@ export async function sendPush(
     // Peek at the response body to see if APNs flagged the wrong environment.
     // Use `.clone()` so the original response body stays readable by the caller.
     let reason: string | undefined;
+    let parseError: Error | undefined;
     try {
       const parsed = (await first.clone().json()) as { reason?: string };
       reason = parsed.reason;
-    } catch {
-      // Fall through: non-JSON 400s aren't environment-mismatch errors.
+    } catch (e) {
+      parseError = e instanceof Error ? e : new Error(String(e));
     }
-    if (reason === "BadDeviceToken") {
+    if (reason && RETRYABLE_400_REASONS.has(reason)) {
       const retry = await sendPushDirect(env, deviceToken, payload, !firstTrySandbox);
       if (retry.ok) {
         await writeCachedApnsEnv(env, deviceToken, !firstTrySandbox);
+        return retry;
       }
+      // Both environments rejected this token. Log enough to distinguish
+      // "really dead token" from "auto-detect bug" without leaking the
+      // full token value into logs.
+      let retryReason: string | undefined;
+      try {
+        retryReason = ((await retry.clone().json()) as { reason?: string }).reason;
+      } catch {
+        // Non-JSON retry body — leave retryReason undefined.
+      }
+      console.error("APNs auto-detect: both environments rejected token", {
+        deviceToken: maskDeviceToken(deviceToken),
+        firstTrySandbox,
+        firstStatus: first.status,
+        firstReason: reason,
+        retryStatus: retry.status,
+        retryReason,
+      });
       return retry;
     }
+    // 400 that we deliberately won't retry. Log so operators can spot APNs
+    // returning malformed 400s or unexpected reasons (e.g. a new env-mismatch
+    // code we don't yet recognise).
+    console.warn("APNs 400 not retried", {
+      deviceToken: maskDeviceToken(deviceToken),
+      reason: reason ?? "<unparseable>",
+      parseError: parseError ? `${parseError.name}: ${parseError.message}` : undefined,
+    });
   }
 
   return first;

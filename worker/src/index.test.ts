@@ -287,9 +287,13 @@ describe("sendPush APNs environment handling", () => {
     return { spy, hosts };
   }
 
+  function apns400With(reason: string): Response {
+    return new Response(JSON.stringify({ reason }), { status: 400 });
+  }
+
   it("uses sandbox host when useSandbox=true is passed explicitly", async () => {
     const { spy, hosts } = captureFetchHosts([apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns } = mockKV();
     await sendPush(mockApnsEnv("false", ns), "token-abc", {}, true);
     expect(hosts).toEqual(["api.sandbox.push.apple.com"]);
@@ -297,7 +301,7 @@ describe("sendPush APNs environment handling", () => {
 
   it("uses production host when useSandbox=false is passed explicitly", async () => {
     const { spy, hosts } = captureFetchHosts([apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns } = mockKV();
     await sendPush(mockApnsEnv("true", ns), "token-abc", {}, false);
     expect(hosts).toEqual(["api.push.apple.com"]);
@@ -305,7 +309,7 @@ describe("sendPush APNs environment handling", () => {
 
   it("skips the KV cache when useSandbox is explicit", async () => {
     const { spy } = captureFetchHosts([apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns, puts } = mockKV();
     await sendPush(mockApnsEnv("false", ns), "token-abc", {}, true);
     expect(puts).toEqual([]);
@@ -313,7 +317,7 @@ describe("sendPush APNs environment handling", () => {
 
   it("auto-detect: no cache + APNS_USE_SANDBOX=false → tries production, caches on success", async () => {
     const { spy, hosts } = captureFetchHosts([apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns, puts } = mockKV();
     const result = await sendPush(mockApnsEnv("false", ns), "token-xyz", {});
     expect(result.ok).toBe(true);
@@ -321,9 +325,19 @@ describe("sendPush APNs environment handling", () => {
     expect(puts).toEqual([{ key: "apns_env:token-xyz", value: "production" }]);
   });
 
+  it("auto-detect: no cache + APNS_USE_SANDBOX=true → tries sandbox, flips to production on BadDeviceToken", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("true", ns), "token-flip2", {});
+    expect(result.ok).toBe(true);
+    expect(hosts).toEqual(["api.sandbox.push.apple.com", "api.push.apple.com"]);
+    expect(puts).toEqual([{ key: "apns_env:token-flip2", value: "production" }]);
+  });
+
   it("auto-detect: cached sandbox env wins over APNS_USE_SANDBOX default", async () => {
     const { spy, hosts } = captureFetchHosts([apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns, puts } = mockKV({ "apns_env:token-xyz": "sandbox" });
     await sendPush(mockApnsEnv("false", ns), "token-xyz", {});
     expect(hosts).toEqual(["api.sandbox.push.apple.com"]);
@@ -333,7 +347,7 @@ describe("sendPush APNs environment handling", () => {
 
   it("auto-detect: BadDeviceToken triggers retry against opposite host and caches it", async () => {
     const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns, puts } = mockKV();
     const result = await sendPush(mockApnsEnv("false", ns), "token-flip", {});
     expect(result.ok).toBe(true);
@@ -341,9 +355,19 @@ describe("sendPush APNs environment handling", () => {
     expect(puts).toEqual([{ key: "apns_env:token-flip", value: "sandbox" }]);
   });
 
+  it("auto-detect: DeviceTokenNotForTopic also triggers retry", async () => {
+    const { spy, hosts } = captureFetchHosts([apns400With("DeviceTokenNotForTopic"), apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-topic", {});
+    expect(result.ok).toBe(true);
+    expect(hosts).toEqual(["api.push.apple.com", "api.sandbox.push.apple.com"]);
+    expect(puts).toEqual([{ key: "apns_env:token-topic", value: "sandbox" }]);
+  });
+
   it("auto-detect: corrects a stale cache after a BadDeviceToken retry", async () => {
     const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns, puts } = mockKV({ "apns_env:token-stale": "sandbox" });
     await sendPush(mockApnsEnv("false", ns), "token-stale", {});
     expect(hosts).toEqual(["api.sandbox.push.apple.com", "api.push.apple.com"]);
@@ -352,7 +376,7 @@ describe("sendPush APNs environment handling", () => {
 
   it("auto-detect: non-BadDeviceToken 4xx is not retried", async () => {
     const { spy, hosts } = captureFetchHosts([apnsOtherError("Unregistered")]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns, puts } = mockKV();
     const result = await sendPush(mockApnsEnv("false", ns), "token-dead", {});
     expect(result.ok).toBe(false);
@@ -361,9 +385,40 @@ describe("sendPush APNs environment handling", () => {
     expect(puts).toEqual([]);
   });
 
+  it("auto-detect: 400 with non-retryable reason is not retried", async () => {
+    const { spy, hosts } = captureFetchHosts([apns400With("BadCertificate")]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-cert", {});
+    expect(result.status).toBe(400);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: 400 with non-JSON body falls through without retry", async () => {
+    const malformedBody = new Response("<html>Bad Gateway</html>", { status: 400 });
+    const { spy, hosts } = captureFetchHosts([malformedBody]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-html", {});
+    expect(result.status).toBe(400);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: 5xx server error is not retried, no cache write", async () => {
+    const { spy, hosts } = captureFetchHosts([new Response("", { status: 503 })]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-busy", {});
+    expect(result.status).toBe(503);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
   it("auto-detect: BadDeviceToken on retry also fails — returns the retry response without re-caching", async () => {
     const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsBadDeviceToken()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns, puts } = mockKV();
     const result = await sendPush(mockApnsEnv("false", ns), "token-dead", {});
     expect(result.ok).toBe(false);
@@ -371,9 +426,70 @@ describe("sendPush APNs environment handling", () => {
     expect(puts).toEqual([]);
   });
 
+  it("auto-detect: network exception on retry propagates without cache write", async () => {
+    const spy = vi.fn()
+      .mockResolvedValueOnce(apnsBadDeviceToken())
+      .mockRejectedValueOnce(new Error("connection reset"));
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    await expect(sendPush(mockApnsEnv("false", ns), "token-flap", {})).rejects.toThrow("connection reset");
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: KV read failure falls through to seed env and still succeeds", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const throwingNs = {
+      get: async () => {
+        throw new Error("KV transient outage");
+      },
+      put: async () => {},
+      delete: async () => {},
+    } as unknown as KVNamespace;
+    const result = await sendPush(mockApnsEnv("false", throwingNs), "token-kvdown", {});
+    expect(result.ok).toBe(true);
+    // Seed env was production (APNS_USE_SANDBOX=false) since the read failed.
+    expect(hosts).toEqual(["api.push.apple.com"]);
+  });
+
+  it("auto-detect: KV write failure is swallowed; push still returns OK", async () => {
+    const { spy } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const writeFailNs = {
+      get: async () => null,
+      put: async () => {
+        throw new Error("KV write quota exceeded");
+      },
+      delete: async () => {},
+    } as unknown as KVNamespace;
+    const result = await sendPush(mockApnsEnv("false", writeFailNs), "token-noput", {});
+    expect(result.ok).toBe(true);
+  });
+
+  it("auto-detect: writes the cache entry with a 30-day expirationTtl", async () => {
+    const { spy } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const recordedPuts: Array<{ key: string; value: string; options?: unknown }> = [];
+    const recordingNs = {
+      get: async () => null,
+      put: async (key: string, value: string, options?: unknown) => {
+        recordedPuts.push({ key, value, options });
+      },
+      delete: async () => {},
+    } as unknown as KVNamespace;
+    await sendPush(mockApnsEnv("false", recordingNs), "token-ttl", {});
+    expect(recordedPuts).toEqual([
+      {
+        key: "apns_env:token-ttl",
+        value: "production",
+        options: { expirationTtl: 60 * 60 * 24 * 30 },
+      },
+    ]);
+  });
+
   it("auto-detect: treats body.sandbox=null as undefined and falls through to auto-detect", async () => {
     const { spy, hosts } = captureFetchHosts([apnsOK()]);
-    globalThis.fetch = spy as unknown as typeof fetch;
+    vi.stubGlobal("fetch", spy);
     const { ns } = mockKV();
     // Cast through unknown to simulate JSON null reaching this function.
     await sendPush(mockApnsEnv("true", ns), "token-null", {}, null as unknown as boolean);
