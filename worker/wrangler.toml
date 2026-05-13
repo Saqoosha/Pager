@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 account_id = "0f56ad2619afc619cc2975dd0728f8a9"
 
+[observability]
+enabled = true
+head_sampling_rate = 1.0
+
 [vars]
 APNS_BUNDLE_ID = "sh.saqoo.pager-app"
 APNS_KEY_ID = "SRH3669YH6"
