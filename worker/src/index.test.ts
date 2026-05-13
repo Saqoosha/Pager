@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { shortenWithLLM, stripMarkdown, hasNegativePolarity, type Env } from "./index";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { shortenWithLLM, stripMarkdown, hasNegativePolarity, sendPush, type Env } from "./index";
 
 function mockEnv(): Env {
   return {
@@ -12,6 +12,66 @@ function mockEnv(): Env {
     SHARED_SECRET: "",
     APNS_USE_SANDBOX: "true",
   };
+}
+
+// In-memory KV that records every put for assertions.
+function mockKV(initial: Record<string, string> = {}): {
+  ns: KVNamespace;
+  puts: Array<{ key: string; value: string }>;
+} {
+  const store = new Map<string, string>(Object.entries(initial));
+  const puts: Array<{ key: string; value: string }> = [];
+  const ns = {
+    get: async (key: string) => store.get(key) ?? null,
+    put: async (key: string, value: string) => {
+      store.set(key, value);
+      puts.push({ key, value });
+    },
+    delete: async (key: string) => {
+      store.delete(key);
+    },
+  } as unknown as KVNamespace;
+  return { ns, puts };
+}
+
+// Generate a real ECDSA P-256 key so generateAPNsJWT can sign the JWT without
+// blowing up. Done once per file via beforeAll to avoid per-test cost.
+let testPrivateKeyPem = "";
+beforeAll(async () => {
+  const keys = await crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["sign", "verify"],
+  );
+  const exported = await crypto.subtle.exportKey("pkcs8", keys.privateKey);
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
+  const wrapped = b64.match(/.{1,64}/g)!.join("\n");
+  testPrivateKeyPem = `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----`;
+});
+
+function mockApnsEnv(useSandboxDefault: "true" | "false", kv: KVNamespace): Env {
+  return {
+    ANTHROPIC_API_KEY: "",
+    REQUESTS: kv,
+    APNS_PRIVATE_KEY: testPrivateKeyPem,
+    APNS_KEY_ID: "TESTKEY01",
+    APNS_TEAM_ID: "TESTTEAM01",
+    APNS_BUNDLE_ID: "test.bundle.id",
+    SHARED_SECRET: "",
+    APNS_USE_SANDBOX: useSandboxDefault,
+  };
+}
+
+function apnsOK(): Response {
+  return new Response("", { status: 200 });
+}
+
+function apnsBadDeviceToken(): Response {
+  return new Response(JSON.stringify({ reason: "BadDeviceToken" }), { status: 400 });
+}
+
+function apnsOtherError(reason: string): Response {
+  return new Response(JSON.stringify({ reason }), { status: 410 });
 }
 
 function mockFetch(response: string | null, status = 200) {
@@ -212,5 +272,227 @@ describe("stripMarkdown", () => {
   it("preserves arithmetic and globs", () => {
     expect(stripMarkdown("2*3=6 result")).toBe("2*3=6 result");
     expect(stripMarkdown("rm *.log")).toBe("rm *.log");
+  });
+});
+
+describe("sendPush APNs environment handling", () => {
+  function captureFetchHosts(responses: Response[]): { spy: ReturnType<typeof vi.fn>; hosts: string[] } {
+    const hosts: string[] = [];
+    const spy = vi.fn().mockImplementation(async (url: string) => {
+      hosts.push(new URL(url).host);
+      const next = responses.shift();
+      if (!next) throw new Error("captureFetchHosts: ran out of mocked responses");
+      return next;
+    });
+    return { spy, hosts };
+  }
+
+  function apns400With(reason: string): Response {
+    return new Response(JSON.stringify({ reason }), { status: 400 });
+  }
+
+  it("uses sandbox host when useSandbox=true is passed explicitly", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns } = mockKV();
+    await sendPush(mockApnsEnv("false", ns), "token-abc", {}, true);
+    expect(hosts).toEqual(["api.sandbox.push.apple.com"]);
+  });
+
+  it("uses production host when useSandbox=false is passed explicitly", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns } = mockKV();
+    await sendPush(mockApnsEnv("true", ns), "token-abc", {}, false);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+  });
+
+  it("skips the KV cache when useSandbox is explicit", async () => {
+    const { spy } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    await sendPush(mockApnsEnv("false", ns), "token-abc", {}, true);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: no cache + APNS_USE_SANDBOX=false → tries production, caches on success", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-xyz", {});
+    expect(result.ok).toBe(true);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([{ key: "apns_env:token-xyz", value: "production" }]);
+  });
+
+  it("auto-detect: no cache + APNS_USE_SANDBOX=true → tries sandbox, flips to production on BadDeviceToken", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("true", ns), "token-flip2", {});
+    expect(result.ok).toBe(true);
+    expect(hosts).toEqual(["api.sandbox.push.apple.com", "api.push.apple.com"]);
+    expect(puts).toEqual([{ key: "apns_env:token-flip2", value: "production" }]);
+  });
+
+  it("auto-detect: cached sandbox env wins over APNS_USE_SANDBOX default", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV({ "apns_env:token-xyz": "sandbox" });
+    await sendPush(mockApnsEnv("false", ns), "token-xyz", {});
+    expect(hosts).toEqual(["api.sandbox.push.apple.com"]);
+    // Already-correct cache: no rewrite needed.
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: BadDeviceToken triggers retry against opposite host and caches it", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-flip", {});
+    expect(result.ok).toBe(true);
+    expect(hosts).toEqual(["api.push.apple.com", "api.sandbox.push.apple.com"]);
+    expect(puts).toEqual([{ key: "apns_env:token-flip", value: "sandbox" }]);
+  });
+
+  it("auto-detect: DeviceTokenNotForTopic also triggers retry", async () => {
+    const { spy, hosts } = captureFetchHosts([apns400With("DeviceTokenNotForTopic"), apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-topic", {});
+    expect(result.ok).toBe(true);
+    expect(hosts).toEqual(["api.push.apple.com", "api.sandbox.push.apple.com"]);
+    expect(puts).toEqual([{ key: "apns_env:token-topic", value: "sandbox" }]);
+  });
+
+  it("auto-detect: corrects a stale cache after a BadDeviceToken retry", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV({ "apns_env:token-stale": "sandbox" });
+    await sendPush(mockApnsEnv("false", ns), "token-stale", {});
+    expect(hosts).toEqual(["api.sandbox.push.apple.com", "api.push.apple.com"]);
+    expect(puts).toEqual([{ key: "apns_env:token-stale", value: "production" }]);
+  });
+
+  it("auto-detect: non-BadDeviceToken 4xx is not retried", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOtherError("Unregistered")]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-dead", {});
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(410);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: 400 with non-retryable reason is not retried", async () => {
+    const { spy, hosts } = captureFetchHosts([apns400With("BadCertificate")]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-cert", {});
+    expect(result.status).toBe(400);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: 400 with non-JSON body falls through without retry", async () => {
+    const malformedBody = new Response("<html>Bad Gateway</html>", { status: 400 });
+    const { spy, hosts } = captureFetchHosts([malformedBody]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-html", {});
+    expect(result.status).toBe(400);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: 5xx server error is not retried, no cache write", async () => {
+    const { spy, hosts } = captureFetchHosts([new Response("", { status: 503 })]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-busy", {});
+    expect(result.status).toBe(503);
+    expect(hosts).toEqual(["api.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: BadDeviceToken on retry also fails — returns the retry response without re-caching", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsBadDeviceToken(), apnsBadDeviceToken()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    const result = await sendPush(mockApnsEnv("false", ns), "token-dead", {});
+    expect(result.ok).toBe(false);
+    expect(hosts).toEqual(["api.push.apple.com", "api.sandbox.push.apple.com"]);
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: network exception on retry propagates without cache write", async () => {
+    const spy = vi.fn()
+      .mockResolvedValueOnce(apnsBadDeviceToken())
+      .mockRejectedValueOnce(new Error("connection reset"));
+    vi.stubGlobal("fetch", spy);
+    const { ns, puts } = mockKV();
+    await expect(sendPush(mockApnsEnv("false", ns), "token-flap", {})).rejects.toThrow("connection reset");
+    expect(puts).toEqual([]);
+  });
+
+  it("auto-detect: KV read failure falls through to seed env and still succeeds", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const throwingNs = {
+      get: async () => {
+        throw new Error("KV transient outage");
+      },
+      put: async () => {},
+      delete: async () => {},
+    } as unknown as KVNamespace;
+    const result = await sendPush(mockApnsEnv("false", throwingNs), "token-kvdown", {});
+    expect(result.ok).toBe(true);
+    // Seed env was production (APNS_USE_SANDBOX=false) since the read failed.
+    expect(hosts).toEqual(["api.push.apple.com"]);
+  });
+
+  it("auto-detect: KV write failure is swallowed; push still returns OK", async () => {
+    const { spy } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const writeFailNs = {
+      get: async () => null,
+      put: async () => {
+        throw new Error("KV write quota exceeded");
+      },
+      delete: async () => {},
+    } as unknown as KVNamespace;
+    const result = await sendPush(mockApnsEnv("false", writeFailNs), "token-noput", {});
+    expect(result.ok).toBe(true);
+  });
+
+  it("auto-detect: writes the cache entry with a 30-day expirationTtl", async () => {
+    const { spy } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const recordedPuts: Array<{ key: string; value: string; options?: unknown }> = [];
+    const recordingNs = {
+      get: async () => null,
+      put: async (key: string, value: string, options?: unknown) => {
+        recordedPuts.push({ key, value, options });
+      },
+      delete: async () => {},
+    } as unknown as KVNamespace;
+    await sendPush(mockApnsEnv("false", recordingNs), "token-ttl", {});
+    expect(recordedPuts).toEqual([
+      {
+        key: "apns_env:token-ttl",
+        value: "production",
+        options: { expirationTtl: 60 * 60 * 24 * 30 },
+      },
+    ]);
+  });
+
+  it("auto-detect: treats body.sandbox=null as undefined and falls through to auto-detect", async () => {
+    const { spy, hosts } = captureFetchHosts([apnsOK()]);
+    vi.stubGlobal("fetch", spy);
+    const { ns } = mockKV();
+    // Cast through unknown to simulate JSON null reaching this function.
+    await sendPush(mockApnsEnv("true", ns), "token-null", {}, null as unknown as boolean);
+    expect(hosts).toEqual(["api.sandbox.push.apple.com"]);
   });
 });
