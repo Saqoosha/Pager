@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { shortenWithLLM, stripMarkdown, sendPush, type Env } from "./index";
+import { shortenWithLLM, stripMarkdown, fallbackBanner, sendPush, type Env } from "./index";
 
 function mockEnv(): Env {
   return {
@@ -172,6 +172,21 @@ describe("shortenWithLLM", () => {
     globalThis.fetch = mockFetch("```\nonly fenced code\n```");
     const result = await shortenWithLLM(mockEnv(), "Original message survives", 100);
     expect(result).toBe("Original message survives");
+  });
+});
+
+describe("fallbackBanner", () => {
+  it("strips markdown from short notify bodies without LLM", () => {
+    const raw =
+      "2 分間両方稼働中。手順実行 (**強制終了 -> 再起動 -> 新 voice 1 タップ**) してもらえる、質問？";
+    const result = fallbackBanner(raw, 100);
+    expect(result).not.toContain("**");
+    expect(result).toContain("強制終了 -> 再起動 -> 新 voice 1 タップ");
+  });
+
+  it("leaves plain short text unchanged", () => {
+    const plain = "Build succeeded with zero warnings";
+    expect(fallbackBanner(plain, 100)).toBe(plain);
   });
 });
 

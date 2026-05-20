@@ -309,7 +309,7 @@ function safeSlice(text: string, maxChars: number): string {
   return Array.from(text).slice(0, maxChars).join("");
 }
 
-function fallbackBanner(text: string, maxChars: number): string {
+export function fallbackBanner(text: string, maxChars: number): string {
   const stripped = stripMarkdown(text);
   return safeSlice(stripped.length > 0 ? stripped : text, maxChars);
 }
@@ -599,14 +599,13 @@ export default {
         const originalMessage = rawMessage.length > MAX_MESSAGE
           ? rawMessage.slice(0, MAX_MESSAGE) + "…"
           : rawMessage;
-        // Apple Watch has very limited display space; shorten long bodies
-        // via Anthropic API (Haiku). If the LLM call fails, the original
-        // text passes through unchanged.
+        // Apple Watch banner + History list bodyShort: long bodies are LLM-
+        // summarized (Haiku); short bodies skip the LLM but still strip markdown
+        // so lock-screen / list rows stay plain text. messageFull keeps markdown.
         const WATCH_BODY_MAX_CHARS = 100;
-        let message = originalMessage;
-        if (message.length > WATCH_BODY_MAX_CHARS) {
-          message = await shortenWithLLM(env, message, WATCH_BODY_MAX_CHARS);
-        }
+        const message = originalMessage.length > WATCH_BODY_MAX_CHARS
+          ? await shortenWithLLM(env, originalMessage, WATCH_BODY_MAX_CHARS)
+          : fallbackBanner(originalMessage, WATCH_BODY_MAX_CHARS);
         const payload: Record<string, unknown> = {
           aps: {
             alert: {
