@@ -66,6 +66,31 @@ Access 187k tokens of past work via get_observations([IDs]) or mem-search skill.
 
 ## Project Notes
 
+- **Hook credentials resolve in three steps, in `hooks/pager-env.sh`:** the
+  environment, then a mounted 1Password Environment, then the `op` CLI. All
+  three hooks source this file, so there is one place to change.
+  - The mount is the 1Password Environment named **Pager**, at
+    `~/.claude/1p-mounts/pager.env` (override with `PAGER_ENV_MOUNT`). It is a
+    FIFO, so reading it is ordinary file I/O — no biometric prompt, and it works
+    from inside an agent sandbox.
+  - **The mount exists for latency.** Measured 2026-08-07: the mount resolves
+    both `PAGER_*` values in ~63ms, against ~1814ms per `op item get` — and the
+    `op` tier issues two of them, so falling through costs ~3.6s. `notify-*.sh`
+    are async and would only lag, but `permission-request.sh` is **synchronous**,
+    so every permission prompt would stall for that.
+  - A `timeout` guards the mount read, because a locked 1Password would
+    otherwise block forever. With no mount and no `op`, resolution fails cleanly
+    and the hooks skip with `exit 0` rather than sending an unauthenticated call.
+- **`PAGER_SECRET` must not be put back into `~/.claude/settings.json`.** It was
+  removed 2026-08-07: `env` there is exported into every subprocess Claude Code
+  spawns, so one `env` dump puts the shared secret in a transcript permanently.
+  Codex's `~/.codex/config.toml` copy was removed at the same time — its value
+  had drifted and no longer matched the Worker, so codex-sourced notifications
+  were silently failing auth until they started resolving from the mount.
+- The Worker authenticates with `Bearer ${env.SHARED_SECRET}` (a Cloudflare
+  Worker secret). The 1Password item `op://Personal/Pager/password` is the
+  source of truth that must match it; when a local copy disagrees, that copy is
+  the stale one.
 - TestFlight/App Store Connect app name: **Saqoosha Pager**. The installed app
   still displays as **Pager** from `CFBundleDisplayName`.
 - Bundle IDs: main app `sh.saqoo.pager-app`; Notification Service Extension
