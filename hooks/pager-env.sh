@@ -67,7 +67,13 @@ load_pager_env() {
   command -v op >/dev/null 2>&1 || return 1
   command -v jq >/dev/null 2>&1 || return 1
 
-  local _op_timeout="${PAGER_OP_TIMEOUT:-10}"
+  # 20s, not 10s: this call can be the one that raises 1Password's unlock
+  # prompt, so the ceiling has to cover a human reaching for the approval.
+  # Measured 2026-08-19: a cold `op item get --format json --reveal` took
+  # 10.9s wall clock including the approval, which the old 10s ceiling would
+  # have killed. Only ever reached on a cold start; the mount handles the
+  # warm path in ~63ms.
+  local _op_timeout="${PAGER_OP_TIMEOUT:-20}"
   _op_get() {
     if command -v timeout >/dev/null 2>&1; then
       timeout "${_op_timeout}s" op item get "$@"
@@ -77,24 +83,40 @@ load_pager_env() {
   }
 
   local login_item="${PAGER_1PASSWORD_LOGIN_ITEM:-ujd5nkrgzat5pa3jjqsyygm3ba}"
-  if [ -z "${PAGER_WORKER_URL:-}" ]; then
-    local _url
-    _url=$(_op_get "$login_item" --fields username 2>/dev/null) || {
-      printf 'pager-env: op item get %s username failed\n' "$login_item" >&2
-    }
-    [ -n "$_url" ] && { PAGER_WORKER_URL="$_url"; export PAGER_WORKER_URL; }
-  fi
 
-  if [ -n "${PAGER_WORKER_URL:-}" ] && [ -n "${PAGER_SECRET:-}" ]; then
-    return 0
-  fi
-
-  if [ -z "${PAGER_SECRET:-}" ]; then
-    local _secret
-    _secret=$(_op_get "$login_item" --fields password --reveal 2>/dev/null) || {
-      printf 'pager-env: op item get %s password failed\n' "$login_item" >&2
+  # ONE `op` invocation, never two.
+  #
+  # This used to be `--fields username` followed by `--fields password`. Each
+  # `op` invocation authorizes independently, so on a cold start -- when
+  # 1Password is still locked and the mount above therefore returns nothing --
+  # a single hook fire asked the human to unlock TWICE. Observed 2026-08-19 at
+  # first launch, and the file's own comment above had already noticed the
+  # doubled latency without noticing the doubled prompt.
+  #
+  # `--format json --reveal` returns username and password from one call, so
+  # the cold start costs one approval instead of two. Measured 2026-08-19 on
+  # this Mac, steady state: `--fields <one>` ~1560/1572ms, `--format json
+  # --reveal` ~1357/1383/1418ms -- so the single call is also slightly cheaper
+  # than either of the two it replaces, taking Source 3 from ~3.1s to ~1.4s.
+  # This is also what ~/.claude/rules/1password.md requires: never spread `op`
+  # reads across separate invocations, batch them.
+  if [ -z "${PAGER_WORKER_URL:-}" ] || [ -z "${PAGER_SECRET:-}" ]; then
+    local _json
+    _json=$(_op_get "$login_item" --format json --reveal 2>/dev/null) || {
+      printf 'pager-env: op item get %s failed\n' "$login_item" >&2
     }
-    [ -n "$_secret" ] && { PAGER_SECRET="$_secret"; export PAGER_SECRET; }
+    if [ -n "${_json:-}" ]; then
+      if [ -z "${PAGER_WORKER_URL:-}" ]; then
+        local _url
+        _url=$(printf '%s' "$_json" | jq -r '.fields[]? | select(.id == "username") | .value // empty' 2>/dev/null)
+        [ -n "$_url" ] && { PAGER_WORKER_URL="$_url"; export PAGER_WORKER_URL; }
+      fi
+      if [ -z "${PAGER_SECRET:-}" ]; then
+        local _secret
+        _secret=$(printf '%s' "$_json" | jq -r '.fields[]? | select(.id == "password") | .value // empty' 2>/dev/null)
+        [ -n "$_secret" ] && { PAGER_SECRET="$_secret"; export PAGER_SECRET; }
+      fi
+    fi
   fi
 
   if [ -n "${PAGER_WORKER_URL:-}" ] && [ -n "${PAGER_SECRET:-}" ]; then
