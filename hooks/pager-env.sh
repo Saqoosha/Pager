@@ -123,13 +123,34 @@ load_pager_env() {
     return 0
   fi
 
+  # SECOND `op` invocation — gated, because it is a second authorization.
+  #
+  # The notes fallback below can only ever supply PAGER_WORKER_URL; there is no
+  # secret in those notes. So when PAGER_SECRET is still empty -- which is the
+  # case whenever the login-item read above failed outright -- this call is
+  # provably useless: the final check needs both values and will fail no matter
+  # what the notes contain. Running it anyway cost one extra 1Password approval
+  # prompt on EVERY hook fire, which is why a locked 1Password made Pager ask
+  # twice per notification. Observed 2026-08-23 in the VDGS session log: six
+  # Stop-hook fires, each logging `op item get <login> failed` and then silently
+  # issuing this second call.
+  #
+  # Related but distinct from the 2026-08-19 fix above, which merged two
+  # `--fields` reads of the SAME item into one. This is a different item.
+  [ -n "${PAGER_SECRET:-}" ] || return 1
+
   local item="${PAGER_1PASSWORD_CONFIG_ITEM:-wothihpxju73pb4qa4yx5wkg24}"
-  local notes
-  notes=$(_op_get "$item" --format json 2>/dev/null \
-    | jq -r '.fields[]? | select(.id == "notesPlain") | .value // ""' 2>/dev/null) || {
+  local notes _notes_rc
+  # `_op_get | jq` would report jq's status, not op's, so an `op` failure used
+  # to slip through as a silent empty read. Check the producer explicitly.
+  notes=$(_op_get "$item" --format json 2>/dev/null)
+  _notes_rc=$?
+  if [ $_notes_rc -ne 0 ]; then
     printf 'pager-env: op item get %s notes failed\n' "$item" >&2
     return 1
-  }
+  fi
+  notes=$(printf '%s' "$notes" \
+    | jq -r '.fields[]? | select(.id == "notesPlain") | .value // ""' 2>/dev/null)
 
   if [ -z "${PAGER_WORKER_URL:-}" ]; then
     local _url
