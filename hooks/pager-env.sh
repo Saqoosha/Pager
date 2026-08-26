@@ -21,12 +21,36 @@ load_pager_env() {
   # exported into every subprocess Claude Code spawned.
   #
   # `timeout` guards a locked 1Password, where the read would block forever.
-  # Keep it short for the sake of the synchronous hook.
+  #
+  # 45s, not 3s. Opening the FIFO while 1Password is locked raises its own
+  # "Developer Environment file mount auth" prompt, and no human types a master
+  # password in three seconds -- so a 3s ceiling GUARANTEED this read failed on
+  # every cold start and fell through to `op` below, which then raised a SECOND,
+  # unrelated authorization. Two windows, two password entries, one hook fire.
+  # Measured 2026-08-26 in 1Password_rCURRENT.log: prompts at 11:11:06 and
+  # 11:11:09, and again at 11:23:04 and 11:23:08 -- 3.0s apart both times, i.e.
+  # exactly this timeout. Waiting instead lets the human unlock once and the
+  # still-open `cat` receive the value, so the notification is not lost either.
+  # On an unlocked 1Password the read is ~63ms and the ceiling never applies.
+  #
+  # Why 45 and not 20: an unlock measured end to end on 2026-08-26 took 16s from
+  # the window appearing to the value arriving (window 11:35:31, unlocked
+  # 11:35:45, notify-stop OK 11:35:47) -- 80% of a 20s budget, which leaves no
+  # room for a typo or a glance away. 45s is ~3x the observed figure and still
+  # inside Claude Code's 60s default hook timeout.
+  #
+  # Raising it is close to free, because the ceiling is NOT what handles a user
+  # who declines: denying the prompt makes the read return immediately at 0
+  # bytes (measured 2026-08-26 -- denied 11:40:16.460, `cat` returned the same
+  # second, rc 0, `timeout` never fired). So "not now" already exits fast, and
+  # the ceiling only ever governs the cases with no producer and no answer at
+  # all: 1Password quit, the destination disabled, or the window ignored. In
+  # every one of those the notification was unsendable regardless.
   local _mount="${PAGER_ENV_MOUNT:-$HOME/.claude/1p-mounts/pager.env}"
   if [ -r "$_mount" ]; then
     local _blob=""
     if command -v timeout >/dev/null 2>&1; then
-      _blob=$(timeout "${PAGER_MOUNT_TIMEOUT:-3}" cat "$_mount" 2>/dev/null)
+      _blob=$(timeout "${PAGER_MOUNT_TIMEOUT:-45}" cat "$_mount" 2>/dev/null)
     else
       _blob=$(cat "$_mount" 2>/dev/null)
     fi
@@ -58,6 +82,23 @@ load_pager_env() {
 
     if [ -n "${PAGER_WORKER_URL:-}" ] && [ -n "${PAGER_SECRET:-}" ]; then
       return 0
+    fi
+
+    # A live mount is authoritative -- do NOT fall through to `op`.
+    #
+    # Reaching here with the FIFO present means 1Password is locked (or the read
+    # was denied); it never means the values are missing from the Environment.
+    # `op` would ask for the very same master password through a different
+    # transport, so the only thing the fallback adds is a second prompt for a
+    # secret the first prompt already covers. That is the actual cause of the
+    # doubled unlock window, distinct from the two same-item `op` calls merged
+    # on 2026-08-19 and the ungated notes read gated on 2026-08-23.
+    #
+    # Cost of returning early: this one notification is skipped (the hooks
+    # already log SKIP and exit 0). The next fire reads the mount in ~63ms.
+    if [ -p "$_mount" ]; then
+      printf 'pager-env: mount %s yielded nothing (1Password locked?); not falling back to op\n' "$_mount" >&2
+      return 1
     fi
   fi
 
