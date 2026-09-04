@@ -1,4 +1,35 @@
 #!/bin/bash
+SOURCE="claude"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --source)
+      SOURCE="${2:-claude}"
+      shift
+      [ $# -gt 0 ] && shift
+      ;;
+    *) shift ;;
+  esac
+done
+
+# Canopy now genuinely replaces this event too. An earlier decision
+# (da58cbc, "Scope the Canopy stand-down to claude stop notifications
+# only") deliberately left this hook alone, reasoning that Canopy's
+# .asking push could only be looked at, not answered — unlike a stop
+# notification, which Canopy already fully replaces. That condition is
+# what changed: Canopy Mobile's history view and lock-screen/Watch
+# actions now answer a permission ask directly (see
+# docs/superpowers/sdd/2026-09-04-canopy-mobile-history in the Canopy
+# repo), so this is that same decision revisited, not forgotten, now
+# that the capability it was conditioned on exists. Same guard shape as
+# notify-stop.sh, and the same reason for scoping to source=claude:
+# $CANOPY_PANE is inherited by any codex/cursor session launched from
+# inside a Canopy pane, and Canopy sends nothing on their behalf. Drain
+# stdin before exiting so the CLI's write to this hook doesn't EPIPE.
+if [ -n "$CANOPY_PANE" ] && [ "$SOURCE" = "claude" ]; then
+  cat >/dev/null
+  exit 0
+fi
+
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
 PROJECT=$(echo "$INPUT" | jq -r '.cwd // "" | split("/") | last')
