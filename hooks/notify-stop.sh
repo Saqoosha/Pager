@@ -13,6 +13,22 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Canopy hosts claude sessions and sends its own stop notification in their
+# place (see docs/superpowers/specs/2026-09-03-canopy-mobile-design.md in the
+# Canopy repo) — Canopy only ever replaces the STOP notification, never a
+# permission request (permission-request.sh's prompt is blocking, and Canopy's
+# .asking push can only be looked at, not answered) or another Notification
+# event such as idle_prompt (which Canopy never pushes at all). So the
+# stand-down belongs only here, and only for source=claude: $CANOPY_PANE is
+# inherited by any codex/cursor session launched from inside a Canopy pane,
+# and standing THOSE down would contradict the guarantee above, since Canopy
+# never sends anything on their behalf. Drain stdin before exiting so the
+# CLI's write to this hook doesn't EPIPE.
+if [ -n "$CANOPY_PANE" ] && [ "$SOURCE" = "claude" ]; then
+  cat >/dev/null
+  exit 0
+fi
+
 # Persistent log so failures from Codex/Cursor (whose stderr handling varies)
 # can be diagnosed after the fact. Claude Code already captures stderr in its
 # own hook log, so this is mostly a belt-and-braces for the other two.
