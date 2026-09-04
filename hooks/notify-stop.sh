@@ -1,6 +1,13 @@
 #!/bin/bash
 # Stop hook for Claude Code, Codex, and Cursor. See docs/multi-cli-setup.md.
 
+# Canopy hosts this session and sends its own notification (see
+# docs/superpowers/specs/2026-09-03-canopy-mobile-design.md in the Canopy
+# repo). Without this, one event buzzes the phone twice. A terminal session
+# has no such variable and behaves exactly as before, and so does every
+# codex/cursor session.
+[ -n "$CANOPY_PANE" ] && exit 0
+
 SOURCE="claude"
 while [ $# -gt 0 ]; do
   case "$1" in
