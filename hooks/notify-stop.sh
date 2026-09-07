@@ -153,6 +153,56 @@ is_placeholder_message() {
   esac
 }
 
+# Canopy injects a prompt-cache keep-alive turn on a timer (hourly by default)
+# into the sessions it hosts. It is a REAL turn on the main conversation whose
+# reply is the single word "OK", so it fires the Stop hook exactly like a turn
+# the user asked for, and Canopy cannot suppress that from its side: its own
+# swallow runs on the webview bridge, downstream of the CLI process this hook
+# lives in. The CANOPY_PANE stand-down above does not cover it either — that
+# only fires when the roster is on, and a Canopy session with the roster off
+# is where the hourly "OK" pushes were coming from.
+#
+# So it is filtered here, on the one mark the turn carries: the tag its prompt
+# opens with. Canopy holds that tag as `KeepAliveGate.promptPrefix` and matches
+# it by prefix for exactly this purpose in its own transcript replay and
+# prompt-history filters, so this is the same seam, not a new one. Keep the
+# string in sync with that constant.
+CANOPY_KEEPALIVE_PREFIX='[Canopy keep-alive]'
+
+# Reads the last user PROMPT out of a transcript and reports whether it is a
+# keep-alive refresh. Every failure path returns 1 (notify as before), because
+# a missed suppression is a spurious buzz while a wrong suppression silently
+# eats a completion the user was waiting for.
+#
+# Only the tail is read: these transcripts reach tens of megabytes and this
+# runs on every Stop. A keep-alive turn uses no tools, so its prompt is within
+# a couple of lines of the end; a window too small can only ever lose the
+# match, which falls to the safe side. `tail -n` cuts on newlines, so jq never
+# sees a half line — and an unterminated final line (the CLI mid-write) aborts
+# jq, which again lands on 1.
+#
+# `tool_result` records are also `type: "user"`, so only records carrying a
+# text block count as prompts. The candidate is compared in its jq-encoded
+# form so a prompt containing newlines cannot have its tail line mistaken for
+# the whole prompt.
+is_canopy_keepalive_turn() {
+  local transcript="$1"
+  [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
+  local last_user
+  last_user=$(tail -n 500 "$transcript" 2>/dev/null | jq -c '
+    select(.type == "user")
+    | .message.content
+    | (if type == "string" then .
+       else ([.[]? | select(.type == "text") | .text] | join(" "))
+       end)
+    | select(. != "")
+  ' 2>/dev/null | tail -n 1)
+  case "$last_user" in
+    "\"$CANOPY_KEEPALIVE_PREFIX"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 TITLE_VERB="Done"
 
 case "$SOURCE" in
@@ -195,6 +245,10 @@ case "$SOURCE" in
       exit 0
     fi
     TRANSCRIPT=$(echo "$INPUT" | jq -r '.transcript_path // ""')
+    if [ "$SOURCE" = "claude" ] && is_canopy_keepalive_turn "$TRANSCRIPT"; then
+      log "SKIP Canopy keep-alive turn (project=${PROJECT:-?})"
+      exit 0
+    fi
     LAST_FROM_PAYLOAD=$(echo "$INPUT" | jq -r '.last_assistant_message // ""')
     MSG=""
     if ! is_placeholder_message "$LAST_FROM_PAYLOAD"; then
