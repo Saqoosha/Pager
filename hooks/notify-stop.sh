@@ -179,18 +179,24 @@ CANOPY_KEEPALIVE_PREFIX='[Canopy keep-alive]'
 # a couple of lines of the end; a window too small can only ever lose the
 # match, which falls to the safe side.
 #
-# **A prompt is identified by structure, never by whether it produced text.**
-# `tool_result` records are also `type: "user"`, so they have to be excluded —
-# but excluding them by "has no text block" also drops a genuine prompt that
-# carries only an image, and the scan would then fall back to an OLDER record
-# still inside the window. Measured: an uncaptioned screenshot is written as
-# `content: [{"type":"image"}]` with no text block (2 occurrences across 80
-# recent transcripts, `isSidechain:false`, top-level prompts), and no user
-# record mixes `tool_result` with text blocks (0 occurrences in the same set)
-# — so "content holds no tool_result block" identifies a prompt exactly, and
-# a prompt with no text correctly yields "" and does not match. Pasting a
-# screenshot with no caption within the window of a keep-alive tick otherwise
-# suppressed the real completion that followed it, silently.
+# **Every user record is a candidate, and one carrying no text yields ""
+# rather than being dropped from the stream.** That is the whole correctness
+# property: the scan has to land on the record that actually ended the turn,
+# and any record it skips lets an OLDER one — possibly a stale keep-alive
+# still inside the window — stand in as the apparent last prompt, silently
+# suppressing a real completion.
+#
+# Two skips were tried and both had that failure. Requiring a text block
+# drops a genuine prompt that carries only an image: measured, an uncaptioned
+# screenshot is written as `content: [{"type":"image"}]` with no text block
+# (2 occurrences across 80 recent transcripts, `isSidechain:false`, top-level
+# prompts). Excluding records that hold a `tool_result` block drops one that
+# holds a tool result AND a genuine follow-up comment: that shape is real CLI
+# output (36 occurrences, all inside `subagents/agent-*.jsonl`, a population
+# `transcript_path` never points into, and 0 across 154,069 top-level user
+# records). The exclusion also bought nothing — a pure `tool_result` record
+# reduces to "" on its own — so it is gone, and the code no longer rests on
+# that second shape staying where it was measured.
 #
 # `jq -R` + `fromjson?` parses each line on its own, so one malformed line is
 # skipped instead of aborting the stream. That matters at both ends: the CLI's
@@ -209,8 +215,6 @@ is_canopy_keepalive_turn() {
     fromjson? // empty
     | select(.type == "user")
     | (.message.content // null)
-    | select(((type == "array")
-              and (([.[]? | select(.type == "tool_result")] | length) > 0)) | not)
     | (if type == "string" then .
        elif type == "array" then ([.[]? | select(.type == "text") | .text] | join(" "))
        else "" end)
