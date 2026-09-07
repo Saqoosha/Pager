@@ -1,70 +1,141 @@
-<claude-mem-context>
-# Memory Context
+# AGENTS.md — Pager
 
-# [Pager] recent context, 2026-05-01 8:47pm GMT+9
+`CLAUDE.md` in this repo is a symlink to this file; edit only this one.
 
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
+## Project Overview
 
-Stats: 50 obs (15,968t read) | 187,189t work | 91% savings
+iOS app + Cloudflare Worker for managing AI coding agent permission requests
+via push notifications. Users approve/deny tool permissions from iPhone lock
+screen or Apple Watch.
 
-### May 1, 2026
-455 8:24p 🔵 1Password Pager vault item structure revealed — credentials stored in username/password and notes fields
-456 " 🔵 1Password "Pager — Cloudflare & APNs Config" is a reference document — actual secrets are Cloudflare Worker secrets, not in 1Password fields
-457 8:25p 🔵 Worker source code reveals /status endpoint deliberately avoids immediate deletion to prevent race conditions
-458 " 🔵 Wrangler 4.81.0 unauthenticated in current shell — CLOUDFLARE_API_TOKEN not set, OAuth token invalid
-459 " 🟣 pager-env.sh created — all three hooks now fall back to 1Password when env vars are missing
-460 8:26p 🔴 Cursor stop hook restored and 1Password credential fallback added to all Pager hooks
-461 " 🔴 Two bugs found in pager-env.sh: wrong URL extracted from 1Password and $SCRIPT_DIR symlink resolution issue
-462 " 🔵 1Password "Pager — Cloudflare & APNs Config" notes contain only the GitHub URL — no Worker URL or SHARED_SECRET plaintext
-463 8:27p 🔵 Pager Worker URL confirmed: pager-relay.saqoosha.workers.dev — credentials in 1Password "Pager" item fields
-464 " 🔴 pager-env.sh fixed: uses correct 1Password item with username/password fields; all hooks use BASH_SOURCE+realpath for symlink-safe SCRIPT_DIR
-465 " 🔵 1Password fallback working but PAGER_SECRET mismatches deployed Worker SHARED_SECRET — HTTP 401 unauthorized
-466 8:28p 🔴 pager-env.sh credential priority reordered — notes-based SHARED_SECRET extraction tried before 1Password password field
-467 " 🔵 HTTP 401 persists after both 1Password fallback strategies — SHARED_SECRET in 1Password is stale/incorrect
-468 8:30p 🔵 Cloudflare API Token found in 1Password "saqoo.sh Sync Tokens" item — could authenticate wrangler to rotate SHARED_SECRET
-469 " 🔵 All 1Password SHARED_SECRET candidates exhausted — none matches deployed Worker; secret must be rotated
-470 8:31p 🔵 Notes-extracted SHARED_SECRET is a real value but also returns 401 — Worker secret definitively out of sync with all 1Password stores
-471 " 🔵 SHARED_SECRET exists in the iPhone's Pager app Keychain — visible in the app's Settings UI "Shared Secret" field
-472 " 🔵 1Password config notes contain a 10-character SHARED_SECRET — too short to be a production secret, likely a test/stub value
-473 8:32p 🔵 Cloudflare API Token in "saqoo.sh Sync Tokens" is 40 chars — same length as the stale Pager login password, both could be old tokens
-474 " 🔵 Cloudflare API Token authenticates to personal Saqoosha account (0f56ad2619afc619cc2975dd0728f8a9) — pager-relay is on different account c21a10f70a8036d2ad10687ab83bfb4b
-475 8:34p 🔵 Pager repo has uncommitted hook changes and new pager-env.sh
-476 " 🔵 Pager Cloudflare Worker auth confirmed as whatever.co account with deployment history
-477 8:35p 🔵 Pager hooks are symlinked into ~/.claude/hooks and registered across Claude Code, Codex, and Cursor
-478 " 🔵 Pager worker returns HTTP 401 unauthorized — SHARED_SECRET mismatch between worker and hook script
-479 " 🔵 All three Pager hooks return 401 — SHARED_SECRET drifted after multiple wrangler secret updates
-480 8:41p 🔴 1Password Secret Credential Corrected
-481 8:42p 🔵 Pager Auth Secret Testing Script via 1Password
-482 " 🔵 Pager Repo State: Hook Scripts Actively Modified
-483 " 🔵 Pager Worker Auth: Login Password Works, Notes SHARED_SECRET Rejected
-484 " 🔴 pager-env.sh: Login Password Now Tried Before Notes SHARED_SECRET
-485 " 🟣 notify-notification.sh: HTTP Response Capture and Error Logging Added
-486 " ✅ permission-request.sh: Timeout Now Configurable via PAGER_PERMISSION_TIMEOUT Env Var
-487 " 🔵 All Four Pager Hook Scripts Pass bash -n Syntax Check
-488 8:43p 🔵 pager-env.sh Successfully Loads Worker URL and Secret from 1Password
-489 " 🔵 notify-stop.sh End-to-End Test Passes; History Shows Prior 401 Failures
-490 " 🔴 Installed notify-notification.sh Has Syntax Error at Line 70 (Unmatched Parenthesis)
-491 " 🔴 notify-notification.sh: Missing Closing Parenthesis on HTTP_CODE Subshell Fixed
-492 " 🔵 All Three Pager Hooks Now Authenticate Successfully After Credential Fix
-493 " 🔴 pager-env.sh: Stale Notes SHARED_SECRET Fallback Removed Entirely
-494 8:44p 🟣 All Three Hook Scripts Now Self-Source pager-env.sh via Symlink-Aware SCRIPT_DIR Resolution
-495 " 🔵 Pager Worker Deployed with APNS_USE_SANDBOX=true
-496 " 🔵 Both Notification Hooks Confirmed Working After Full Cleanup
-497 8:45p 🔵 Pager Worker wrangler.toml Configuration Details
-498 " ✅ Pager Worker Switched to Production APNs for TestFlight
-499 " 🔵 Wrangler Dry-Run Confirms APNS_USE_SANDBOX=false Ready to Deploy
-500 8:46p 🟣 Pager Worker Deployed to Production APNs — Version 18507d76
-501 " 🔵 Live Worker Version Confirmed: APNS_USE_SANDBOX=false Active
-502 " 🔵 APNs BadDeviceToken After Switching to Production — Device Token Mismatch
-503 8:47p 🔵 Pager iOS App Registration Flow: Manual "Register Device" Button Required
-504 " 🔵 Pager iOS APNs Token Auto-Registered on Every Launch; Keychain Accessibility Fixed for Locked-Device Watch Taps
+Stop/done notifications are also supported for **Codex CLI** and **Cursor**
+(IDE Agent only). Per-CLI sender avatars are rendered as Apple Communication
+Notifications, giving the lock-screen banner a Slack-style "from Claude Code"
+/ "from Codex" / "from Cursor" header.
 
-Access 187k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>
+A History view inside the app lists every received notification (push payload
++ decision) by reading a JSON-per-entry store in the App Group container that
+both the main app and the Notification Service Extension write into.
 
-## Project Notes
+## Tech Stack
+
+- **iOS app**: Swift 6, SwiftUI, iOS 17.0+, strict concurrency (`SWIFT_STRICT_CONCURRENCY=complete`)
+- **Notification Service Extension**: same Swift 6 settings; shares an App Group with the main app
+- **Worker**: TypeScript, Cloudflare Workers, KV namespace
+- **Build**: XcodeGen for Xcode project generation
+- **Push**: APNs with ES256 JWT authentication (Web Crypto)
+- **Markdown**: [MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui) for rendering notification body in History detail view
+
+## Targets
+
+- `Pager` — main app, bundle id `sh.saqoo.pager-app`
+- `PagerNotificationService` — `UNNotificationServiceExtension`, bundle id `sh.saqoo.pager-app.NotificationService`
+- App Group: `group.sh.saqoo.pager-app` (both targets)
+
+## Build Commands
+
+```bash
+# Generate Xcode project
+xcodegen generate
+
+# Build for device "S"
+xcodebuild -project Pager.xcodeproj -scheme Pager \
+  -destination "platform=iOS,name=S" -allowProvisioningUpdates build
+
+# Archive for App Store Connect/TestFlight
+BUILD_NUMBER=$(date +%Y%m%d%H%M)
+ARCHIVE_DIR="/tmp/pager-testflight-$BUILD_NUMBER"
+xcodebuild archive -project Pager.xcodeproj -scheme Pager \
+  -configuration Release -destination "generic/platform=iOS" \
+  -archivePath "$ARCHIVE_DIR/Pager.xcarchive" \
+  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+  -allowProvisioningUpdates
+
+# Install to device
+xcrun devicectl device install app --device "<your-iphone-udid>" "$APP_PATH"
+
+# Deploy worker
+cd worker && wrangler deploy
+
+# Re-extract sender avatars from locally installed Mac apps
+./scripts/refresh-avatars.sh
+```
+
+## Key Design Decisions
+
+- `NotificationDelegate` is a separate class from `AppDelegate` to satisfy Swift 6 nonisolated requirements for `UNUserNotificationCenterDelegate`
+- `NetworkService` is `@MainActor` with `nonisolated` on `sendDecision()` since it's called from the notification delegate. After `completionHandler` is called, `sendDecision` runs under a `beginBackgroundTask` assertion so iOS keeps the app alive long enough to POST the watch decision
+- Action buttons (`ALLOW_ACTION`, `DENY_ACTION`, `ALLOW_ALWAYS_ACTION`) are **not** marked `authenticationRequired`. With that flag, taps on a locked iPhone (including ones forwarded from Apple Watch) get queued until unlock and never reach the delegate. Trade-off: anyone holding the unlocked phone could tap Allow
+- Shared secret is stored in Keychain (`KeychainHelper`, kSecAttrAccessibleAfterFirstUnlock). Items first stored without that attribute are inaccessible while the device is locked, which silently 401s the watch-decision POST — the AppDelegate re-saves the secret at launch to migrate legacy entries
+- `HistoryStore` writes one JSON file per notification into the App Group container. NSE writes on append; main app overwrites on `updateDecision`. They never target the same file at the same time. `HistoryUpdateBridge` posts a Darwin notification so the main app can refresh the SwiftUI list live when the NSE writes a new entry
+- APNs sandbox vs production is **auto-detected per device token**. `sendPush()` first tries the cached environment for that token (or `APNS_USE_SANDBOX` as the seed when nothing is cached) and, on a `BadDeviceToken` 400, retries against the opposite host and updates the cache (`apns_env:<deviceToken>` KV key). Routes can still pass an explicit `sandbox` boolean in the POST body to bypass auto-detect — the hooks honor `PAGER_SANDBOX` for backward compatibility, but it's no longer required: omitting the flag lets the worker figure it out. The `/test` endpoint relies entirely on auto-detect, so a debug build (sandbox token) and a TestFlight build (production token) can share the same registered device entry without manual reconfiguration.
+- Worker stores pending requests in KV with 5-minute TTL; decided requests get 60-second TTL (let TTL expire rather than delete-on-read so the poller doesn't miss the decision if its HTTP response is lost)
+- `/notify` pushes include a `messageFull` custom key in the APNs payload with the original message (up to 3000 chars, capped at the Worker). The Notification Service Extension reads it (falling back to `aps.alert.body` if absent) and stores it as `NotificationHistoryItem.body`. The iOS history detail view renders it with MarkdownUI so formatting (bold, italic, code blocks, lists, links, headers, tables) is preserved. The lock-screen banner uses an LLM-shortened plain-text version for Apple Watch legibility.
+- TestFlight/App Store Connect uploads require the App Store Connect app record to exist first. The public ASC name is **Saqoosha Pager** because `Pager` is already taken globally; the installed app display name remains `Pager`.
+- Export compliance is declared in both Info.plists with `ITSAppUsesNonExemptEncryption = false`. This is valid for the current app because it only uses standard `URLSession` HTTPS and Keychain storage, with no custom cryptography.
+
+## Hooks
+
+Three hook scripts in `hooks/` directory:
+- `permission-request.sh` — sends permission request to worker, polls for decision (120s timeout). Wired (per-project or globally) via `settings.json` `PermissionRequest` hook. Returns `{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"|"deny",...}}}` so Claude Code honors the watch decision instead of falling through to the inline prompt. Tool-input preview is rendered tool-by-tool (Bash → command, Read/Write/Edit → file_path, etc.) so the lock-screen banner is human-readable
+- `notify-notification.sh` — user-global Claude Code `Notification` hook. Skips `permission_prompt` (already covered by the richer permission-request hook) and `observer-sessions` (claude-mem noise). Title is `[<project>] Waiting / Notification`. Always sends `source: "claude"`
+- `notify-stop.sh` — Stop hook for **Claude Code, Codex, and Cursor**. Accepts `--source <claude|codex|cursor>` (defaults to `claude`). Claude/Codex extract the body from `last_assistant_message` with a transcript fallback (Claude `.jsonl` shape — Codex transcripts don't match, so an empty `last_assistant_message` falls through to `"Done"`; the Claude branch waits up to ~2s for the final assistant block to land on disk before parsing, since Stop can fire before the file is flushed). Codex review subagents return their result as a JSON object (`findings[]` / `overall_correctness` / `overall_explanation`, or `{title, body}` / `{summary}`); `flatten_codex_json` summarizes that to readable text before `clean_text` runs, otherwise the lock-screen banner shows raw `{ "findings": [...]`. Cursor uses `workspace_roots[]` + `status` for the title verb, and pulls the body from its JSONL transcript using the Anthropic Messages shape (`role:"assistant", message.content[].text`). Falls back to the status verb when the transcript yields nothing. PPID-walking guard suppresses the duplicate Claude notification when Cursor invokes Claude's hook directly via `~/.claude/settings.json`. Two Canopy-specific stand-downs also live here, and they cover
+different things: `$CANOPY_PANE` (set only when Canopy will push for that
+session) suppresses the whole Stop notification, while `is_canopy_keepalive_turn`
+suppresses just the hourly prompt-cache keep-alive turn Canopy injects — a real
+turn on the main conversation whose reply is the single word `OK`, so it fires
+Stop like any other turn and Canopy cannot suppress it from its side (its own
+swallow runs on the webview bridge, downstream of the CLI process this hook lives
+in). Detection reads the transcript's last user prompt for the `[Canopy
+keep-alive]` tag, which Canopy holds as `KeepAliveGate.promptPrefix`. Three
+properties are load-bearing: every failure path falls through to notifying (a
+missed suppression is one spurious buzz, a wrong one silently eats a completion
+someone was waiting for); a prompt is identified structurally rather than by
+whether it produced text, because a record that gets *skipped* lets an older
+keep-alive stand in as the apparent last prompt — an uncaptioned screenshot is
+written as `content:[{"type":"image"}]` with no text block, and a record can
+carry a `tool_result` block alongside a genuine follow-up comment; and `jq -R` +
+`fromjson?` parses each line alone so one corrupt line cannot hide every record
+after it
+
+All three hit the worker's `/notify` or `/request` endpoint. `notify-*.sh` must be installed to `~/.claude/hooks/` and wired via `~/.claude/settings.json` to fire for every project — symlink from this repo to keep both in sync. Codex/Cursor wiring lives in `~/.codex/hooks.json` and `~/.cursor/hooks.json`; see [docs/multi-cli-setup.md](docs/multi-cli-setup.md).
+
+Hook activity is logged to `~/Library/Logs/Pager/{permission-request,notify-stop}.log` (override directory with `PAGER_LOG_DIR`).
+
+## Communication Notifications
+
+The notification service extension donates an `INSendMessageIntent` per push so iOS renders the lock-screen banner with a sender avatar. APNs payload carries `source: "claude" | "codex" | "cursor"`; the extension picks the matching PNG from `Sources/PagerNotificationService/Avatars/`. The avatar list is mirrored in three places — keep them in sync when adding a new source:
+1. `worker/src/index.ts` (`VALID_SOURCES`)
+2. `Sources/PagerNotificationService/NotificationService.swift` (`NotificationSource`)
+3. `Sources/Pager/HistoryView.swift` (`SourceAvatar.assetName`)
+
+This requires the `com.apple.developer.usernotifications.communication` entitlement on the main app target only — the Service Extension does not need it (and Xcode does not expose the capability for extension targets). **No Apple approval form is needed** — it's a free capability — but `xcodebuild -allowProvisioningUpdates` cannot enable it via CLI alone. Open the project in Xcode once and add *Communication Notifications* capability to the **Pager** target via Signing & Capabilities; Xcode then registers it on the App ID and subsequent CLI builds succeed. If the entitlement is missing the extension still works — it falls back to a `UNNotificationAttachment` thumbnail.
+
+## TestFlight
+
+See [docs/testflight.md](docs/testflight.md) for the end-to-end distribution
+workflow, export options, and troubleshooting notes. The first successful upload
+used version `1.0.0`, build `202605011954`.
+
+## Credentials
+
+**1Password (Personal vault) is the source of truth for every secret.** A
+Cloudflare Worker cannot resolve `op://` at the edge, so each Worker secret is
+necessarily a *copy*; the 1Password item is the record of what was put there and
+the only way to restore it. Item names are not evidence of contents — verify
+before using one (see ハマりどころ below).
+
+| Worker secret | Purpose | 1Password item (Personal) |
+|---|---|---|
+| `SHARED_SECRET` | Bearer auth between hooks and Worker | `Pager` (LOGIN) → `password`. `username` field = Worker URL |
+| `ANTHROPIC_API_KEY` | Haiku one-line summary for the Watch/lock-screen banner | `Pager — Anthropic API Key` (API_CREDENTIAL) → `password` |
+| `APNS_PRIVATE_KEY` | APNs ES256 push signing | `Pager — APNs Auth Key (SRH3669YH6)` (DOCUMENT) → `.p8` file |
+
+Plaintext Worker vars live in `worker/wrangler.toml` and are not secrets:
+`APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`.
+`Pager — Cloudflare & APNs Config` (SECURE_NOTE) holds account_id, KV namespace
+id and bundle ids for reference only — no live credential resolves from it.
+`worker/wrangler.toml` is committed; `credentials/AuthKey_*.p8` is gitignored.
 
 - **Hook credentials resolve in three steps, in `hooks/pager-env.sh`:** the
   environment, then a mounted 1Password Environment, then the `op` CLI. All
@@ -87,25 +158,89 @@ Access 187k tokens of past work via get_observations([IDs]) or mem-search skill.
   Codex's `~/.codex/config.toml` copy was removed at the same time — its value
   had drifted and no longer matched the Worker, so codex-sourced notifications
   were silently failing auth until they started resolving from the mount.
-- The Worker authenticates with `Bearer ${env.SHARED_SECRET}` (a Cloudflare
-  Worker secret). The 1Password item `op://Personal/Pager/password` is the
-  source of truth that must match it; when a local copy disagrees, that copy is
-  the stale one.
-- TestFlight/App Store Connect app name: **Saqoosha Pager**. The installed app
-  still displays as **Pager** from `CFBundleDisplayName`.
-- Bundle IDs: main app `sh.saqoo.pager-app`; Notification Service Extension
-  `sh.saqoo.pager-app.NotificationService`.
-- App Store Connect uploads require the app record to exist before running
-  `xcodebuild -exportArchive`. If export fails with
-  `missingApp(bundleId: "sh.saqoo.pager-app")`, create the ASC app record first.
-- Notification body text is stored as raw markdown and rendered with MarkdownUI
-  (`github.com/gonzalezreal/swift-markdown-ui`, v2.4.1) in the History detail
-  view. Markdown formatting is only minimally cleaned (blank lines and horizontal
-  rules) on the hook side, so bold, italic, code blocks, lists, headers, links,
-  and tables all render as intended.
-- TestFlight builds use production APNs. Set Worker var
-  `APNS_USE_SANDBOX = "false"` before testing a TestFlight install.
-- Export compliance is predeclared with
-  `ITSAppUsesNonExemptEncryption = false` in both Info.plists. This assumes the
-  app continues to use only standard `URLSession` HTTPS and Keychain storage,
-  without custom cryptography.
+
+- **`PAGER_SECRET` must not be put back into `~/.claude/settings.json`.** It was
+  removed 2026-08-07: `env` there is exported into every subprocess Claude Code
+  spawns, so one `env` dump puts the shared secret in a transcript permanently.
+  Codex's `~/.codex/config.toml` copy was removed at the same time — its value
+  had drifted and no longer matched the Worker, so codex-sourced notifications
+  were silently failing auth until they started resolving from the mount.
+
+Restore or rotate a Worker secret without the value passing through a shell
+argument or a transcript:
+
+```bash
+# SHARED_SECRET
+op read 'op://Personal/Pager/password' | wrangler secret put SHARED_SECRET
+
+# ANTHROPIC_API_KEY — the item name contains an em dash, which op:// rejects,
+# so resolve the item by id (see ハマりどころ)
+op item get <id> --fields label=password --reveal | tr -d '\n' \
+  | wrangler secret put ANTHROPIC_API_KEY
+
+# APNs key
+op read 'op://Personal/Pager — APNs Auth Key (SRH3669YH6)/AuthKey_SRH3669YH6.p8' \
+  > credentials/AuthKey_SRH3669YH6.p8
+```
+
+`SHARED_SECRET` additionally exists as `PAGER_SECRET` in the 1Password
+**Environment** named `Pager`, which is a separate copy feeding the hooks'
+mount — editing the vault item does *not* update it. So the value lives in three
+places and all three must move together. **Two copies is not a design flaw to
+remove:** a Cloudflare Worker cannot resolve `op://` at the edge, so its secret
+is necessarily a copy. The fix is naming one source of truth, which the table
+above does — **when a local copy disagrees with `op://Personal/Pager/password`,
+that copy is the stale one.**
+
+Rotate in this order — vault item, then the Environment (Developer → View
+Environments → Import .env file), then `wrangler secret put`. Doing the Worker
+first takes notifications down while they are the only channel that would report
+it.
+
+A Worker secret cannot be read back. To find out which value the Worker actually
+holds, use the 401/400 probe below — it answers without sending a push.
+The Anthropic key has no such probe; the Worker degrades to `fallbackBanner()`
+on any non-OK response, so a dead key costs the LLM-shortened banner but never a
+notification. To tell whether the Worker's copy still works, send one real
+notification and check whether the banner is summarized or mechanically
+truncated — the Anthropic Console has no "last used" column, but the Cost column
+moves for the key that was used.
+
+## Environment Variables
+
+- `PAGER_WORKER_URL` — Worker endpoint URL
+- `PAGER_SECRET` — Shared secret for auth
+- `PAGER_SANDBOX` — Optional. Force-overrides the per-token auto-detect by passing `sandbox: true|false` in the request body. Leave unset to let the worker auto-detect from the device token (recommended)
+- `PAGER_LOG_DIR` — Optional override for hook log location (default `~/Library/Logs/Pager`)
+
+## ハマりどころ（実体験）
+
+- **秘密リファレンスの名前は中身の証拠にならない。使う前に実物で検証する。**
+  `op://Personal/Pager API Key/password` は名前に反して Anthropic API キー
+  (`sk-ant-…`) で、Worker の `SHARED_SECRET` ではなかった。名前だけを見て
+  Environment に import した結果、`PAGER_SECRET` が重複し、危うく Worker の
+  共有シークレットを Anthropic キーで上書きするところだった（全通知が停止する）。
+  アイテムは `Pager — Anthropic API Key` に改名済み。**書く前に Worker へ投げて
+  受理されるか見れば一手で分かった** — 実際そうしたら即座に判明した。
+- **Worker の秘密が生きているかは 401/400 プローブで判定できる。通知は飛ばない。**
+  `checkAuth` は全ルートの手前にあり、`/notify` は認証通過後・プッシュ送信前に
+  `source` を検証する。だから不正な `source` を送れば、**401 = 認証失敗 /
+  400 = 認証成功**として切り分けられ、iPhone は鳴らない。
+  ```bash
+  umask 077; CFG=$(mktemp); trap 'rm -f "$CFG"' EXIT
+  printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/json"\n' "$SECRET" > "$CFG"
+  curl -sS -o /dev/null -w '%{http_code}' -X POST "$PAGER_WORKER_URL/notify" \
+    --config "$CFG" -d '{"title":"probe","message":"probe","source":"__invalid__"}'
+  ```
+  秘密を `-H` で渡すと `argv` に載るので `--config` を使う。ローテーション後は
+  新しい値が 400、古い値が 401 になることを両方確認する — 後者が失効の証明。
+- **`bash -x` でフックをトレースすると `PAGER_SECRET` が平文で出る。**
+  `pager-env.sh` はマウントから値を解決するので、トレースがその代入行を展開して
+  しまう。Claude Code のトランスクリプト (`~/.claude/projects/**/*.jsonl`) は
+  永続するため、これは取り消せない漏洩であり、ローテーション以外に復旧手段がない
+  （2026-09-07 に実際に発生し、共有シークレットをローテーションした）。
+  デバッグは `bash -x` ではなく、`sed -E 's/=.*/=<redacted>/'` や、値を出さずに
+  真偽だけ出すスクリプトで行う。
+- **`op://` リファレンスに em ダッシュ (`—`) を含むアイテム名は使えない。**
+  `invalid character in secret reference` で失敗する。`op item list --format json`
+  で id を引いて `op item get <id>` を使う。
