@@ -177,25 +177,43 @@ CANOPY_KEEPALIVE_PREFIX='[Canopy keep-alive]'
 # Only the tail is read: these transcripts reach tens of megabytes and this
 # runs on every Stop. A keep-alive turn uses no tools, so its prompt is within
 # a couple of lines of the end; a window too small can only ever lose the
-# match, which falls to the safe side. `tail -n` cuts on newlines, so jq never
-# sees a half line — and an unterminated final line (the CLI mid-write) aborts
-# jq, which again lands on 1.
+# match, which falls to the safe side.
 #
-# `tool_result` records are also `type: "user"`, so only records carrying a
-# text block count as prompts. The candidate is compared in its jq-encoded
-# form so a prompt containing newlines cannot have its tail line mistaken for
-# the whole prompt.
+# **A prompt is identified by structure, never by whether it produced text.**
+# `tool_result` records are also `type: "user"`, so they have to be excluded —
+# but excluding them by "has no text block" also drops a genuine prompt that
+# carries only an image, and the scan would then fall back to an OLDER record
+# still inside the window. Measured: an uncaptioned screenshot is written as
+# `content: [{"type":"image"}]` with no text block (2 occurrences across 80
+# recent transcripts, `isSidechain:false`, top-level prompts), and no user
+# record mixes `tool_result` with text blocks (0 occurrences in the same set)
+# — so "content holds no tool_result block" identifies a prompt exactly, and
+# a prompt with no text correctly yields "" and does not match. Pasting a
+# screenshot with no caption within the window of a keep-alive tick otherwise
+# suppressed the real completion that followed it, silently.
+#
+# `jq -R` + `fromjson?` parses each line on its own, so one malformed line is
+# skipped instead of aborting the stream. That matters at both ends: the CLI's
+# unterminated final line while it is mid-write, and — the reason a per-line
+# parse is worth the cost — a corrupt line anywhere in the window, which under
+# a whole-stream parse hides every record after it and can expose an older
+# keep-alive as the apparent last prompt.
+#
+# The candidate is compared in its jq-encoded form so a prompt containing
+# newlines cannot have its tail line mistaken for the whole prompt.
 is_canopy_keepalive_turn() {
   local transcript="$1"
   [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
   local last_user
-  last_user=$(tail -n 500 "$transcript" 2>/dev/null | jq -c '
-    select(.type == "user")
-    | .message.content
+  last_user=$(tail -n 500 "$transcript" 2>/dev/null | jq -Rc '
+    fromjson? // empty
+    | select(.type == "user")
+    | (.message.content // null)
+    | select(((type == "array")
+              and (([.[]? | select(.type == "tool_result")] | length) > 0)) | not)
     | (if type == "string" then .
-       else ([.[]? | select(.type == "text") | .text] | join(" "))
-       end)
-    | select(. != "")
+       elif type == "array" then ([.[]? | select(.type == "text") | .text] | join(" "))
+       else "" end)
   ' 2>/dev/null | tail -n 1)
   case "$last_user" in
     "\"$CANOPY_KEEPALIVE_PREFIX"*) return 0 ;;
