@@ -7,6 +7,19 @@ load_pager_env() {
     return 0
   fi
 
+  # --- Source 1b: the login keychain (service "claude-secret") ---------------
+  # Only Mac Studio has these items. It runs sessions while Saqoosha is away,
+  # and a mount read there can raise an approval prompt nobody can answer
+  # without a remote screen. A keychain read needs no approval and takes ~10ms.
+  local _kc_url _kc_secret
+  if _kc_url=$(/usr/bin/security find-generic-password -s claude-secret -a PAGER_WORKER_URL -w 2>/dev/null) \
+    && _kc_secret=$(/usr/bin/security find-generic-password -s claude-secret -a PAGER_SECRET -w 2>/dev/null) \
+    && [ -n "$_kc_url" ] && [ -n "$_kc_secret" ]; then
+    PAGER_WORKER_URL="$_kc_url"; PAGER_SECRET="$_kc_secret"
+    export PAGER_WORKER_URL PAGER_SECRET
+    return 0
+  fi
+
   # --- Source 2: a mounted 1Password Environment -----------------------------
   # The mount is a FIFO served by 1Password.app, so reading it is ordinary file
   # I/O — milliseconds, no biometric prompt, no IPC.
