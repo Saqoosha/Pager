@@ -98,7 +98,6 @@
 				1CA1E51E13496D3093709EBA /* Info.plist */,
 				FB99C7BC1B8CCD611314D8FE /* NotificationService.entitlements */,
 				005343063FBC582C4A058D89 /* NotificationService.swift */,
-				A7FD0810BCEF4CCE751F2777 /* Avatars */,
 			);
 			name = PagerNotificationService;
 			path = Sources/PagerNotificationService;

@@ -86,6 +86,11 @@ async function sendPushDirect(
 // every push. Both reads and writes are best-effort: a stale, missing, or
 // unreachable cache only costs one extra round-trip via the BadDeviceToken
 // retry path, so KV failures must never break the push itself.
+/** The only link a notification may open: Sill 1P's approval screen for one named Mac. */
+export function isSillApprovalURL(value: unknown): boolean {
+  return typeof value === "string" && /^sill-1p:\/\/approve\?mac=[A-Za-z0-9%._~-]{1,128}$/.test(value);
+}
+
 function apnsEnvCacheKey(deviceToken: string): string {
   return `apns_env:${deviceToken}`;
 }
@@ -579,13 +584,16 @@ export default {
 
       // POST /notify — send plain notification (no action buttons)
       if (path === "/notify" && request.method === "POST") {
-        const body = await parseJSON<{ title: string; message: string; source?: string; sandbox?: boolean }>(request);
+        const body = await parseJSON<{ title: string; message: string; source?: string; sandbox?: boolean; openURL?: string }>(request);
         if (!body) return badRequest("invalid JSON body");
         // Allowlist source server-side so the extension can trust it without
         // re-validating. Reject typos loudly to match the /response style
         // rather than silently dropping an avatar.
         if (body.source !== undefined && !VALID_SOURCES.includes(body.source as Source)) {
           return badRequest(`invalid source: must be one of ${VALID_SOURCES.join(", ")}`);
+        }
+        if (body.openURL !== undefined && !isSillApprovalURL(body.openURL)) {
+          return badRequest("invalid openURL");
         }
         const source = body.source as Source | undefined;
         const deviceToken = await env.REQUESTS.get("device_token");
@@ -619,6 +627,7 @@ export default {
           messageFull: originalMessage,
         };
         if (source) payload.source = source;
+        if (body.openURL) payload.openURL = body.openURL;
         const pushResult = await sendPush(env, deviceToken, payload, body.sandbox);
         if (!pushResult.ok) {
           const err = await pushResult.text();

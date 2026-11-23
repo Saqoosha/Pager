@@ -44,7 +44,11 @@ targets:
     type: app-extension
     platform: iOS
     sources:
-      - Sources/PagerNotificationService
+      - path: Sources/PagerNotificationService
+        excludes:
+          - Avatars
+      - path: Sources/PagerNotificationService/Avatars
+        buildPhase: resources
       - Sources/Shared
     settings:
       base:

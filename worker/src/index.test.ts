@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { shortenWithLLM, stripMarkdown, fallbackBanner, sendPush, type Env } from "./index";
+import { shortenWithLLM, stripMarkdown, fallbackBanner, sendPush, type Env, isSillApprovalURL } from "./index";
 
 function mockEnv(): Env {
   return {
@@ -461,5 +461,24 @@ describe("sendPush APNs environment handling", () => {
     // Cast through unknown to simulate JSON null reaching this function.
     await sendPush(mockApnsEnv("true", ns), "token-null", {}, null as unknown as boolean);
     expect(hosts).toEqual(["api.sandbox.push.apple.com"]);
+  });
+});
+
+describe("isSillApprovalURL", () => {
+  it("accepts an approval link for a named Mac", () => {
+    expect(isSillApprovalURL("sill-1p://approve?mac=Saqoosha%20Mac%20Studio")).toBe(true);
+  });
+
+  it.each([
+    "sill-1p://approve",
+    "sill-1p://other?mac=Studio",
+    "sill-1p://approve?mac=Studio&x=1",
+    "https://example.com/?mac=Studio",
+    "sill-1p://approve?mac=" + "a".repeat(129),
+    "",
+    null,
+    1,
+  ])("rejects %s", (value) => {
+    expect(isSillApprovalURL(value)).toBe(false);
   });
 });
