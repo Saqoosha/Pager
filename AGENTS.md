@@ -71,6 +71,7 @@ cd worker && npm run deploy
 - APNs sandbox vs production is **auto-detected per device token**. `sendPush()` first tries the cached environment for that token (or `APNS_USE_SANDBOX` as the seed when nothing is cached) and, on a `BadDeviceToken` 400, retries against the opposite host and updates the cache (`apns_env:<deviceToken>` KV key). Routes can still pass an explicit `sandbox` boolean in the POST body to bypass auto-detect — the hooks honor `PAGER_SANDBOX` for backward compatibility, but it's no longer required: omitting the flag lets the worker figure it out. The `/test` endpoint relies entirely on auto-detect, so a debug build (sandbox token) and a TestFlight build (production token) can share the same registered device entry without manual reconfiguration.
 - Worker stores pending requests in KV with 5-minute TTL; decided requests get 60-second TTL (let TTL expire rather than delete-on-read so the poller doesn't miss the decision if its HTTP response is lost)
 - `/notify` pushes include a `messageFull` custom key in the APNs payload with the original message (up to 3000 chars, capped at the Worker). The Notification Service Extension reads it (falling back to `aps.alert.body` if absent) and stores it as `NotificationHistoryItem.body`. The iOS history detail view renders it with MarkdownUI so formatting (bold, italic, code blocks, lists, links, headers, tables) is preserved. The lock-screen banner uses an LLM-shortened plain-text version for Apple Watch legibility.
+- `/notify` accepts an optional `openURL`, limited to `sill-1p://approve?mac=<name>` by both the Worker and the app. Tapping that notification opens the private Sill 1P app, or the notification detail if opening fails. Sill.app detects the 1Password prompt and the LaunchAgent `sh.saqoo.1p-approval-page` sends this request.
 - TestFlight/App Store Connect uploads require the App Store Connect app record to exist first. The public ASC name is **Saqoosha Pager** because `Pager` is already taken globally; the installed app display name remains `Pager`.
 - Export compliance is declared in both Info.plists with `ITSAppUsesNonExemptEncryption = false`. This is valid for the current app because it only uses standard `URLSession` HTTPS and Keychain storage, with no custom cryptography.
 
@@ -242,6 +243,15 @@ moves for the key that was used.
   （2026-09-07 に実際に発生し、共有シークレットをローテーションした）。
   デバッグは `bash -x` ではなく、`sed -E 's/=.*/=<redacted>/'` や、値を出さずに
   真偽だけ出すスクリプトで行う。
+- **TestFlight 版を開発ビルドで置き換えると、Worker は `200` を返すのに通知が届かない。**
+  KV の `device_token` が古い production トークンのまま残り、APNs がそれを受理するため。
+  さらにアプリの Shared Secret が空になり、Register は `Authentication failed` になる。
+  開いただけでは再登録されないので、Settings で 1Password の `Pager` のパスワードを貼り、
+  **Register Device** を押して **Send Test Notification** で確かめる。
+- **`cf deploy` は Wrangler 4.136 以上と、対応する `cf` がプロジェクトに要る。**
+  グローバルの `cf` と Wrangler の組み合わせでは `no root config found` で失敗した。
+  `npm run deploy` はリポジトリに固定した `cf` と `saqoosha` プロファイルを使う。
+  会社アカウントでログイン中の素の `wrangler deploy` は認証エラー `10000` になる。
 - **`op://` リファレンスに em ダッシュ (`—`) を含むアイテム名は使えない。**
   `invalid character in secret reference` で失敗する。`op item list --format json`
   で id を引いて `op item get <id>` を使う。
