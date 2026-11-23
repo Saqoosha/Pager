@@ -4,3 +4,4 @@ dist/
 
 # Secrets are managed via wrangler secret put, not stored in wrangler.toml.
 # wrangler.toml is committed — see wrangler.example.toml for the template.
+.cloudflare/

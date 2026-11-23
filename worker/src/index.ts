@@ -579,13 +579,16 @@ export default {
 
       // POST /notify — send plain notification (no action buttons)
       if (path === "/notify" && request.method === "POST") {
-        const body = await parseJSON<{ title: string; message: string; source?: string; sandbox?: boolean }>(request);
+        const body = await parseJSON<{ title: string; message: string; source?: string; sandbox?: boolean; openURL?: string }>(request);
         if (!body) return badRequest("invalid JSON body");
         // Allowlist source server-side so the extension can trust it without
         // re-validating. Reject typos loudly to match the /response style
         // rather than silently dropping an avatar.
         if (body.source !== undefined && !VALID_SOURCES.includes(body.source as Source)) {
           return badRequest(`invalid source: must be one of ${VALID_SOURCES.join(", ")}`);
+        }
+        if (body.openURL !== undefined && body.openURL !== "sill-1p://approve") {
+          return badRequest("invalid openURL");
         }
         const source = body.source as Source | undefined;
         const deviceToken = await env.REQUESTS.get("device_token");
@@ -619,6 +622,7 @@ export default {
           messageFull: originalMessage,
         };
         if (source) payload.source = source;
+        if (body.openURL) payload.openURL = body.openURL;
         const pushResult = await sendPush(env, deviceToken, payload, body.sandbox);
         if (!pushResult.ok) {
           const err = await pushResult.text();

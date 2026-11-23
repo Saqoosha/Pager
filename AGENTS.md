@@ -54,8 +54,8 @@ xcodebuild archive -project Pager.xcodeproj -scheme Pager \
 # Install to device
 xcrun devicectl device install app --device "<your-iphone-udid>" "$APP_PATH"
 
-# Deploy worker
-cd worker && wrangler deploy
+# Deploy worker (the `saqoosha` cf profile owns this account)
+cd worker && npm run deploy
 
 # Re-extract sender avatars from locally installed Mac apps
 ./scripts/refresh-avatars.sh
