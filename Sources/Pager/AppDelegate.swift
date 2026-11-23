@@ -123,9 +123,12 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         let historyId = (userInfo["historyId"] as? String) ?? requestId
 
         if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-            if let link = userInfo["openURL"] as? String, link.hasPrefix("sill-1p://"), let url = URL(string: link) {
+            if let link = userInfo["openURL"] as? String,
+               link.range(of: #"^sill-1p://approve\?mac=[A-Za-z0-9%._~-]{1,128}$"#, options: .regularExpression) != nil,
+               let url = URL(string: link) {
                 Task { @MainActor in
-                    UIApplication.shared.open(url)
+                    let opened = await UIApplication.shared.open(url)
+                    if !opened, let historyId { AppState.shared.pendingDetailId = historyId }
                     completionHandler()
                 }
                 return

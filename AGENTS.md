@@ -131,7 +131,8 @@ before using one (see ハマりどころ below).
 | `ANTHROPIC_API_KEY` | Haiku one-line summary for the Watch/lock-screen banner | `Pager — Anthropic API Key` (API_CREDENTIAL) → `password` |
 | `APNS_PRIVATE_KEY` | APNs ES256 push signing | `Pager — APNs Auth Key (SRH3669YH6)` (DOCUMENT) → `.p8` file |
 
-Plaintext Worker vars live in `worker/wrangler.toml` and are not secrets:
+Plaintext Worker vars are not secrets. Deploys read `worker/cloudflare.config.ts`
+and `wrangler dev` reads `worker/wrangler.toml`, so change both:
 `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_USE_SANDBOX`.
 `Pager — Cloudflare & APNs Config` (SECURE_NOTE) holds account_id, KV namespace
 id and bundle ids for reference only — no live credential resolves from it.

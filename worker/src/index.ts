@@ -86,6 +86,11 @@ async function sendPushDirect(
 // every push. Both reads and writes are best-effort: a stale, missing, or
 // unreachable cache only costs one extra round-trip via the BadDeviceToken
 // retry path, so KV failures must never break the push itself.
+/** The only link a notification may open: Sill 1P's approval screen for one named Mac. */
+export function isSillApprovalURL(value: unknown): boolean {
+  return typeof value === "string" && /^sill-1p:\/\/approve\?mac=[A-Za-z0-9%._~-]{1,128}$/.test(value);
+}
+
 function apnsEnvCacheKey(deviceToken: string): string {
   return `apns_env:${deviceToken}`;
 }
@@ -587,7 +592,7 @@ export default {
         if (body.source !== undefined && !VALID_SOURCES.includes(body.source as Source)) {
           return badRequest(`invalid source: must be one of ${VALID_SOURCES.join(", ")}`);
         }
-        if (body.openURL !== undefined && body.openURL !== "sill-1p://approve") {
+        if (body.openURL !== undefined && !isSillApprovalURL(body.openURL)) {
           return badRequest("invalid openURL");
         }
         const source = body.source as Source | undefined;
